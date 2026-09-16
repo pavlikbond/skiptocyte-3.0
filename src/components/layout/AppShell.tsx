@@ -1,0 +1,185 @@
+import { Menu } from "lucide-react";
+import { useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { useAuth } from "@/features/auth/AuthProvider";
+import { HistorySidebar } from "@/features/history/HistoryDrawer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+
+const links = [
+  { to: "/", label: "Home" },
+  { to: "/differential", label: "Counter" },
+  { to: "/timers", label: "Timers" },
+  { to: "/tools", label: "Tools" },
+  { to: "/contact", label: "Contact" },
+];
+
+function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 92 92"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        fill="currentColor"
+        className="text-primary"
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M0.171509 42C2.08497 19.7861 19.7861 2.08497 42 0.171501V6.1975C23.1023 8.07378 8.07378 23.1023 6.19751 42H0.171509ZM0.17151 50C2.08497 72.2139 19.7861 89.915 42 91.8285V85.8025C23.1023 83.9262 8.07378 68.8977 6.19751 50H0.17151ZM85.8025 50C83.9262 68.8977 68.8977 83.9262 50 85.8025V91.8285C72.2139 89.915 89.915 72.2139 91.8285 50H85.8025ZM91.8285 42C89.915 19.7861 72.2139 2.08497 50 0.171501V6.1975C68.8977 8.07378 83.9262 23.1023 85.8025 42H91.8285Z"
+      />
+      <path
+        fill="currentColor"
+        className="text-foreground"
+        d="M49.82 21.6C54.2067 21.6 57.45 22.5567 59.55 24.47C61.6967 26.3833 62.77 28.88 62.77 31.96C62.77 34.5733 62.0467 36.58 60.6 37.98C59.1533 39.3333 57.0767 40.01 54.37 40.01C53.53 40.01 52.9933 39.94 52.76 39.8C52.5267 39.6133 52.41 39.2633 52.41 38.75C52.41 38.2833 52.3633 37.6767 52.27 36.93C52.2233 36.1833 52.06 35.46 51.78 34.76C51.5 34.06 51.0567 33.4767 50.45 33.01C49.8433 32.4967 49.0033 32.24 47.93 32.24C46.4367 32.24 45.1067 32.7067 43.94 33.64C42.7733 34.5267 42.19 35.6933 42.19 37.14C42.19 38.4 42.6567 39.4267 43.59 40.22C44.57 41.0133 45.7833 41.76 47.23 42.46C48.6767 43.1133 50.24 43.79 51.92 44.49C53.6467 45.19 55.2333 46.1233 56.68 47.29C58.1267 48.41 59.3167 49.8333 60.25 51.56C61.23 53.24 61.72 55.3867 61.72 58C61.72 60.0533 61.37 61.99 60.67 63.81C60.0167 65.5833 59.0133 67.1467 57.66 68.5C56.3533 69.8067 54.6733 70.8333 52.62 71.58C50.6133 72.3267 48.2567 72.7 45.55 72.7C43.2167 72.7 41.0467 72.4433 39.04 71.93C37.08 71.4167 35.3533 70.7867 33.86 70.04C32.4133 69.2467 31.27 68.4067 30.43 67.52C29.59 66.5867 29.17 65.7467 29.17 65C29.17 61.92 29.3333 59.7033 29.66 58.35C30.0333 56.9967 30.6867 56.32 31.62 56.32C32.2733 56.32 32.95 56.6 33.65 57.16C34.3967 57.72 35.2367 58.35 36.17 59.05C37.1033 59.75 38.1767 60.38 39.39 60.94C40.65 61.5 42.0967 61.78 43.73 61.78C44.3833 61.78 45.0133 61.7333 45.62 61.64C46.2733 61.5 46.8333 61.29 47.3 61.01C47.8133 60.73 48.21 60.3567 48.49 59.89C48.8167 59.4233 48.98 58.8633 48.98 58.21C48.98 57.0433 48.5367 56.11 47.65 55.41C46.7633 54.71 45.6433 54.08 44.29 53.52C42.9367 52.9133 41.4667 52.3067 39.88 51.7C38.34 51.0467 36.8933 50.1833 35.54 49.11C34.1867 47.99 33.0667 46.5667 32.18 44.84C31.2933 43.1133 30.85 40.8967 30.85 38.19C30.85 35.1567 31.41 32.59 32.53 30.49C33.6967 28.39 35.1667 26.6867 36.94 25.38C38.76 24.0267 40.79 23.07 43.03 22.51C45.3167 21.9033 47.58 21.6 49.82 21.6Z"
+      />
+    </svg>
+  );
+}
+
+function NavItems({
+  onNavigate,
+  layout,
+}: {
+  onNavigate?: () => void;
+  layout: "bar" | "sheet";
+}) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const sheet = layout === "sheet";
+
+  return (
+    <>
+      {links.map((l) => (
+        <NavLink
+          key={l.to}
+          to={l.to}
+          end={l.to === "/"}
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            cn(
+              "cursor-pointer rounded-md text-sm font-medium whitespace-nowrap outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              sheet ? "flex min-h-11 items-center px-3 py-2.5" : "px-2.5 py-1.5 xl:px-3 xl:py-2",
+              isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/60",
+            )
+          }
+        >
+          {l.label}
+        </NavLink>
+      ))}
+      <div className={sheet ? "mt-5 flex flex-col gap-2.5" : "contents"}>
+        <Button variant="coffee" size={sheet ? "default" : "sm"} asChild className={sheet ? "h-11 w-full" : "shrink-0"}>
+          <a href="https://buymeacoffee.com/pashko" target="_blank" rel="noreferrer">
+            Buy me a coffee
+          </a>
+        </Button>
+        {user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size={sheet ? "default" : "sm"} className={sheet ? "h-11 w-full" : undefined}>
+                {user.email ?? "Account"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem
+                onSelect={() => {
+                  void logout();
+                  onNavigate?.();
+                }}
+              >
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button
+            size={sheet ? "default" : "sm"}
+            className={sheet ? "h-11 w-full" : "shrink-0"}
+            onClick={() => {
+              onNavigate?.();
+              void navigate("/login");
+            }}
+          >
+            Login / Sign up
+          </Button>
+        )}
+      </div>
+    </>
+  );
+}
+
+export function AppShell() {
+  const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const isCounter = location.pathname === "/differential";
+
+  return (
+    <SidebarProvider
+      className={
+        isCounter
+          ? "flex h-svh min-h-0 flex-col overflow-hidden"
+          : "flex min-h-svh flex-col"
+      }
+    >
+      <header className="sticky top-0 z-40 w-full shrink-0 border-b border-border bg-background/90 backdrop-blur">
+        <div className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+          {isCounter ? <SidebarTrigger className="md:hidden" /> : null}
+          <Link
+            to="/"
+            className="flex min-w-0 items-center gap-2.5 rounded-md text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            <BrandMark className="size-8 shrink-0" />
+            <span className="truncate text-sm font-semibold tracking-tight">
+              Skiptocyte
+              <span className="hidden xl:inline">: Laboratory Tools</span>
+            </span>
+          </Link>
+          <nav className="ml-auto hidden items-center gap-1 min-[54rem]:flex">
+            <NavItems layout="bar" />
+            <ThemeToggle />
+          </nav>
+          <div className="ml-auto flex items-center gap-1 min-[54rem]:hidden">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label="Open menu">
+              <Menu />
+            </Button>
+          </div>
+        </div>
+      </header>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="w-[min(100%,22rem)] gap-0 p-0">
+          <SheetHeader className="px-6 pt-6 pb-3 pr-14">
+            <SheetTitle>Menu</SheetTitle>
+          </SheetHeader>
+          <nav className="flex flex-col gap-1 px-6 pb-8">
+            <NavItems layout="sheet" onNavigate={() => setOpen(false)} />
+          </nav>
+        </SheetContent>
+      </Sheet>
+      <div className="relative flex min-h-0 min-w-0 flex-1">
+        {isCounter ? <HistorySidebar /> : null}
+        {isCounter ? (
+          <div className="hidden w-9 shrink-0 justify-center pt-2 md:peer-data-[state=collapsed]:flex">
+            <SidebarTrigger className="border bg-background shadow-sm" />
+          </div>
+        ) : null}
+        <SidebarInset className="min-h-0 overflow-auto">
+          <div className="mx-auto w-full max-w-screen-2xl flex-1 px-3 py-4">
+            <Outlet />
+          </div>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
+  );
+}

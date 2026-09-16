@@ -1,0 +1,755 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-06T19:36:00.000Z",
+  "title": "Design System: Skiptocyte",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Stain Wash",
+        "canonical": "oklch(0.965 0.012 236)",
+        "tonalRamp": [
+          "oklch(0.18 0.022 236)",
+          "oklch(0.28 0.02 236)",
+          "oklch(0.42 0.018 236)",
+          "oklch(0.55 0.016 236)",
+          "oklch(0.68 0.014 236)",
+          "oklch(0.82 0.013 236)",
+          "oklch(0.92 0.012 236)",
+          "oklch(0.965 0.012 236)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Scope Ink",
+        "canonical": "oklch(0.28 0.035 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.04 250)",
+          "oklch(0.22 0.038 250)",
+          "oklch(0.28 0.035 250)",
+          "oklch(0.4 0.032 250)",
+          "oklch(0.55 0.028 250)",
+          "oklch(0.7 0.022 250)",
+          "oklch(0.85 0.016 250)",
+          "oklch(0.95 0.01 250)"
+        ]
+      },
+      "card-foreground": {
+        "role": "neutral",
+        "displayName": "Paper Ink",
+        "canonical": "oklch(0.25 0.04 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.04 250)",
+          "oklch(0.2 0.04 250)",
+          "oklch(0.25 0.04 250)",
+          "oklch(0.38 0.035 250)",
+          "oklch(0.52 0.03 250)",
+          "oklch(0.68 0.022 250)",
+          "oklch(0.84 0.015 250)",
+          "oklch(0.95 0.01 250)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "oklch(0.985 0.008 236)",
+        "tonalRamp": [
+          "oklch(0.2 0.02 236)",
+          "oklch(0.32 0.018 236)",
+          "oklch(0.45 0.015 236)",
+          "oklch(0.58 0.012 236)",
+          "oklch(0.72 0.01 236)",
+          "oklch(0.86 0.009 236)",
+          "oklch(0.94 0.008 236)",
+          "oklch(0.985 0.008 236)"
+        ]
+      },
+      "popover": {
+        "role": "neutral",
+        "displayName": "High Paper",
+        "canonical": "oklch(0.995 0.004 236)",
+        "tonalRamp": [
+          "oklch(0.22 0.016 236)",
+          "oklch(0.34 0.014 236)",
+          "oklch(0.48 0.012 236)",
+          "oklch(0.62 0.01 236)",
+          "oklch(0.76 0.008 236)",
+          "oklch(0.88 0.006 236)",
+          "oklch(0.95 0.005 236)",
+          "oklch(0.995 0.004 236)"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Stain Blue",
+        "canonical": "oklch(0.42 0.1 236)",
+        "tonalRamp": [
+          "oklch(0.18 0.08 236)",
+          "oklch(0.28 0.09 236)",
+          "oklch(0.36 0.1 236)",
+          "oklch(0.42 0.1 236)",
+          "oklch(0.52 0.09 236)",
+          "oklch(0.68 0.07 236)",
+          "oklch(0.84 0.04 236)",
+          "oklch(0.95 0.015 236)"
+        ]
+      },
+      "primary-foreground": {
+        "role": "primary",
+        "displayName": "Wash White",
+        "canonical": "oklch(0.98 0.01 236)",
+        "tonalRamp": [
+          "oklch(0.2 0.02 236)",
+          "oklch(0.35 0.018 236)",
+          "oklch(0.5 0.016 236)",
+          "oklch(0.65 0.014 236)",
+          "oklch(0.78 0.012 236)",
+          "oklch(0.88 0.011 236)",
+          "oklch(0.94 0.01 236)",
+          "oklch(0.98 0.01 236)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Wash Tint",
+        "canonical": "oklch(0.92 0.03 236)",
+        "tonalRamp": [
+          "oklch(0.2 0.04 236)",
+          "oklch(0.32 0.038 236)",
+          "oklch(0.45 0.035 236)",
+          "oklch(0.58 0.032 236)",
+          "oklch(0.72 0.03 236)",
+          "oklch(0.84 0.03 236)",
+          "oklch(0.92 0.03 236)",
+          "oklch(0.97 0.02 236)"
+        ]
+      },
+      "secondary-foreground": {
+        "role": "neutral",
+        "displayName": "Deep Ink",
+        "canonical": "oklch(0.3 0.05 245)",
+        "tonalRamp": [
+          "oklch(0.16 0.05 245)",
+          "oklch(0.22 0.05 245)",
+          "oklch(0.3 0.05 245)",
+          "oklch(0.42 0.045 245)",
+          "oklch(0.55 0.038 245)",
+          "oklch(0.7 0.03 245)",
+          "oklch(0.84 0.02 245)",
+          "oklch(0.95 0.012 245)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Quiet Wash",
+        "canonical": "oklch(0.94 0.018 236)",
+        "tonalRamp": [
+          "oklch(0.2 0.025 236)",
+          "oklch(0.32 0.022 236)",
+          "oklch(0.46 0.02 236)",
+          "oklch(0.6 0.019 236)",
+          "oklch(0.74 0.018 236)",
+          "oklch(0.86 0.018 236)",
+          "oklch(0.94 0.018 236)",
+          "oklch(0.98 0.012 236)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Quiet Ink",
+        "canonical": "oklch(0.45 0.03 245)",
+        "tonalRamp": [
+          "oklch(0.18 0.035 245)",
+          "oklch(0.28 0.032 245)",
+          "oklch(0.36 0.03 245)",
+          "oklch(0.45 0.03 245)",
+          "oklch(0.58 0.026 245)",
+          "oklch(0.72 0.022 245)",
+          "oklch(0.85 0.016 245)",
+          "oklch(0.95 0.01 245)"
+        ]
+      },
+      "accent": {
+        "role": "neutral",
+        "displayName": "Accent Wash",
+        "canonical": "oklch(0.9 0.045 236)",
+        "tonalRamp": [
+          "oklch(0.2 0.05 236)",
+          "oklch(0.32 0.048 236)",
+          "oklch(0.45 0.046 236)",
+          "oklch(0.58 0.045 236)",
+          "oklch(0.72 0.045 236)",
+          "oklch(0.84 0.045 236)",
+          "oklch(0.9 0.045 236)",
+          "oklch(0.97 0.025 236)"
+        ]
+      },
+      "accent-foreground": {
+        "role": "neutral",
+        "displayName": "Accent Ink",
+        "canonical": "oklch(0.28 0.05 245)",
+        "tonalRamp": [
+          "oklch(0.16 0.05 245)",
+          "oklch(0.22 0.05 245)",
+          "oklch(0.28 0.05 245)",
+          "oklch(0.4 0.045 245)",
+          "oklch(0.55 0.038 245)",
+          "oklch(0.7 0.028 245)",
+          "oklch(0.84 0.018 245)",
+          "oklch(0.95 0.01 245)"
+        ]
+      },
+      "destructive": {
+        "role": "tertiary",
+        "displayName": "Alert Red",
+        "canonical": "oklch(0.52 0.19 25)",
+        "tonalRamp": [
+          "oklch(0.22 0.16 25)",
+          "oklch(0.32 0.18 25)",
+          "oklch(0.42 0.19 25)",
+          "oklch(0.52 0.19 25)",
+          "oklch(0.64 0.16 25)",
+          "oklch(0.76 0.12 25)",
+          "oklch(0.88 0.06 25)",
+          "oklch(0.96 0.02 25)"
+        ]
+      },
+      "destructive-foreground": {
+        "role": "tertiary",
+        "displayName": "Alert White",
+        "canonical": "oklch(0.98 0.01 25)",
+        "tonalRamp": [
+          "oklch(0.22 0.04 25)",
+          "oklch(0.36 0.03 25)",
+          "oklch(0.5 0.025 25)",
+          "oklch(0.64 0.02 25)",
+          "oklch(0.78 0.015 25)",
+          "oklch(0.88 0.012 25)",
+          "oklch(0.94 0.01 25)",
+          "oklch(0.98 0.01 25)"
+        ]
+      },
+      "coffee": {
+        "role": "secondary",
+        "displayName": "Coffee Gold",
+        "canonical": "oklch(0.84 0.155 92)",
+        "tonalRamp": [
+          "oklch(0.22 0.1 92)",
+          "oklch(0.34 0.12 92)",
+          "oklch(0.46 0.14 92)",
+          "oklch(0.58 0.15 92)",
+          "oklch(0.7 0.155 92)",
+          "oklch(0.84 0.155 92)",
+          "oklch(0.92 0.1 92)",
+          "oklch(0.97 0.04 92)"
+        ]
+      },
+      "coffee-foreground": {
+        "role": "secondary",
+        "displayName": "Coffee Ink",
+        "canonical": "oklch(0.28 0.05 70)",
+        "tonalRamp": [
+          "oklch(0.16 0.05 70)",
+          "oklch(0.22 0.05 70)",
+          "oklch(0.28 0.05 70)",
+          "oklch(0.4 0.045 70)",
+          "oklch(0.55 0.04 70)",
+          "oklch(0.7 0.03 70)",
+          "oklch(0.84 0.02 70)",
+          "oklch(0.95 0.01 70)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Wash Line",
+        "canonical": "oklch(0.86 0.03 236)",
+        "tonalRamp": [
+          "oklch(0.2 0.03 236)",
+          "oklch(0.32 0.03 236)",
+          "oklch(0.46 0.03 236)",
+          "oklch(0.6 0.03 236)",
+          "oklch(0.74 0.03 236)",
+          "oklch(0.86 0.03 236)",
+          "oklch(0.92 0.025 236)",
+          "oklch(0.97 0.015 236)"
+        ]
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "Wash Line",
+        "canonical": "oklch(0.86 0.03 236)",
+        "tonalRamp": [
+          "oklch(0.2 0.03 236)",
+          "oklch(0.32 0.03 236)",
+          "oklch(0.46 0.03 236)",
+          "oklch(0.6 0.03 236)",
+          "oklch(0.74 0.03 236)",
+          "oklch(0.86 0.03 236)",
+          "oklch(0.92 0.025 236)",
+          "oklch(0.97 0.015 236)"
+        ]
+      },
+      "ring": {
+        "role": "primary",
+        "displayName": "Focus Blue",
+        "canonical": "oklch(0.48 0.11 236)",
+        "tonalRamp": [
+          "oklch(0.2 0.1 236)",
+          "oklch(0.3 0.11 236)",
+          "oklch(0.4 0.11 236)",
+          "oklch(0.48 0.11 236)",
+          "oklch(0.58 0.1 236)",
+          "oklch(0.72 0.07 236)",
+          "oklch(0.86 0.04 236)",
+          "oklch(0.95 0.015 236)"
+        ]
+      },
+      "timer-run-wash": {
+        "role": "primary",
+        "displayName": "Running Wash",
+        "canonical": "oklch(0.955 0.028 236)",
+        "tonalRamp": [
+          "oklch(0.22 0.045 236)",
+          "oklch(0.34 0.04 236)",
+          "oklch(0.48 0.035 236)",
+          "oklch(0.62 0.032 236)",
+          "oklch(0.76 0.03 236)",
+          "oklch(0.88 0.028 236)",
+          "oklch(0.955 0.028 236)",
+          "oklch(0.98 0.016 236)"
+        ]
+      },
+      "timer-run-ink": {
+        "role": "primary",
+        "displayName": "Running Ink",
+        "canonical": "oklch(0.36 0.09 240)",
+        "tonalRamp": [
+          "oklch(0.18 0.09 240)",
+          "oklch(0.26 0.09 240)",
+          "oklch(0.36 0.09 240)",
+          "oklch(0.48 0.08 240)",
+          "oklch(0.62 0.06 240)",
+          "oklch(0.76 0.04 240)",
+          "oklch(0.88 0.025 240)",
+          "oklch(0.96 0.012 240)"
+        ]
+      },
+      "timer-run-track": {
+        "role": "primary",
+        "displayName": "Running Track",
+        "canonical": "oklch(0.9 0.04 236)",
+        "tonalRamp": [
+          "oklch(0.22 0.04 236)",
+          "oklch(0.34 0.04 236)",
+          "oklch(0.48 0.04 236)",
+          "oklch(0.62 0.04 236)",
+          "oklch(0.76 0.04 236)",
+          "oklch(0.9 0.04 236)",
+          "oklch(0.95 0.025 236)",
+          "oklch(0.98 0.012 236)"
+        ]
+      },
+      "timer-run-arc": {
+        "role": "primary",
+        "displayName": "Running Arc",
+        "canonical": "oklch(0.48 0.12 236)",
+        "tonalRamp": [
+          "oklch(0.2 0.1 236)",
+          "oklch(0.3 0.11 236)",
+          "oklch(0.4 0.12 236)",
+          "oklch(0.48 0.12 236)",
+          "oklch(0.58 0.1 236)",
+          "oklch(0.72 0.07 236)",
+          "oklch(0.86 0.04 236)",
+          "oklch(0.95 0.015 236)"
+        ]
+      },
+      "timer-run-chip": {
+        "role": "primary",
+        "displayName": "Running Chip",
+        "canonical": "oklch(0.91 0.045 236)",
+        "tonalRamp": [
+          "oklch(0.22 0.05 236)",
+          "oklch(0.34 0.048 236)",
+          "oklch(0.48 0.046 236)",
+          "oklch(0.62 0.045 236)",
+          "oklch(0.76 0.045 236)",
+          "oklch(0.91 0.045 236)",
+          "oklch(0.95 0.03 236)",
+          "oklch(0.98 0.015 236)"
+        ]
+      },
+      "timer-pause-wash": {
+        "role": "secondary",
+        "displayName": "Pause Ochre",
+        "canonical": "oklch(0.955 0.03 78)",
+        "tonalRamp": [
+          "oklch(0.22 0.04 78)",
+          "oklch(0.34 0.038 78)",
+          "oklch(0.48 0.035 78)",
+          "oklch(0.62 0.032 78)",
+          "oklch(0.76 0.03 78)",
+          "oklch(0.88 0.03 78)",
+          "oklch(0.955 0.03 78)",
+          "oklch(0.98 0.016 78)"
+        ]
+      },
+      "timer-pause-ink": {
+        "role": "secondary",
+        "displayName": "Pause Ink",
+        "canonical": "oklch(0.4 0.07 68)",
+        "tonalRamp": [
+          "oklch(0.18 0.07 68)",
+          "oklch(0.28 0.07 68)",
+          "oklch(0.4 0.07 68)",
+          "oklch(0.52 0.065 68)",
+          "oklch(0.66 0.05 68)",
+          "oklch(0.8 0.035 68)",
+          "oklch(0.9 0.02 68)",
+          "oklch(0.97 0.01 68)"
+        ]
+      },
+      "timer-pause-track": {
+        "role": "secondary",
+        "displayName": "Pause Track",
+        "canonical": "oklch(0.9 0.04 78)",
+        "tonalRamp": [
+          "oklch(0.22 0.04 78)",
+          "oklch(0.34 0.04 78)",
+          "oklch(0.48 0.04 78)",
+          "oklch(0.62 0.04 78)",
+          "oklch(0.76 0.04 78)",
+          "oklch(0.9 0.04 78)",
+          "oklch(0.95 0.025 78)",
+          "oklch(0.98 0.012 78)"
+        ]
+      },
+      "timer-pause-arc": {
+        "role": "secondary",
+        "displayName": "Pause Arc",
+        "canonical": "oklch(0.55 0.1 68)",
+        "tonalRamp": [
+          "oklch(0.22 0.09 68)",
+          "oklch(0.34 0.1 68)",
+          "oklch(0.45 0.1 68)",
+          "oklch(0.55 0.1 68)",
+          "oklch(0.68 0.08 68)",
+          "oklch(0.8 0.055 68)",
+          "oklch(0.9 0.03 68)",
+          "oklch(0.97 0.012 68)"
+        ]
+      },
+      "timer-pause-chip": {
+        "role": "secondary",
+        "displayName": "Pause Chip",
+        "canonical": "oklch(0.91 0.045 78)",
+        "tonalRamp": [
+          "oklch(0.22 0.05 78)",
+          "oklch(0.34 0.048 78)",
+          "oklch(0.48 0.046 78)",
+          "oklch(0.62 0.045 78)",
+          "oklch(0.76 0.045 78)",
+          "oklch(0.91 0.045 78)",
+          "oklch(0.95 0.03 78)",
+          "oklch(0.98 0.015 78)"
+        ]
+      },
+      "timer-done-wash": {
+        "role": "tertiary",
+        "displayName": "Done Teal",
+        "canonical": "oklch(0.945 0.045 165)",
+        "tonalRamp": [
+          "oklch(0.22 0.05 165)",
+          "oklch(0.34 0.048 165)",
+          "oklch(0.48 0.046 165)",
+          "oklch(0.62 0.045 165)",
+          "oklch(0.76 0.045 165)",
+          "oklch(0.88 0.045 165)",
+          "oklch(0.945 0.045 165)",
+          "oklch(0.98 0.02 165)"
+        ]
+      },
+      "timer-done-ink": {
+        "role": "tertiary",
+        "displayName": "Done Ink",
+        "canonical": "oklch(0.32 0.08 165)",
+        "tonalRamp": [
+          "oklch(0.16 0.08 165)",
+          "oklch(0.24 0.08 165)",
+          "oklch(0.32 0.08 165)",
+          "oklch(0.44 0.07 165)",
+          "oklch(0.58 0.055 165)",
+          "oklch(0.74 0.04 165)",
+          "oklch(0.88 0.025 165)",
+          "oklch(0.96 0.012 165)"
+        ]
+      },
+      "timer-done-track": {
+        "role": "tertiary",
+        "displayName": "Done Track",
+        "canonical": "oklch(0.88 0.05 165)",
+        "tonalRamp": [
+          "oklch(0.22 0.05 165)",
+          "oklch(0.34 0.05 165)",
+          "oklch(0.48 0.05 165)",
+          "oklch(0.62 0.05 165)",
+          "oklch(0.76 0.05 165)",
+          "oklch(0.88 0.05 165)",
+          "oklch(0.94 0.03 165)",
+          "oklch(0.98 0.015 165)"
+        ]
+      },
+      "timer-done-arc": {
+        "role": "tertiary",
+        "displayName": "Done Arc",
+        "canonical": "oklch(0.48 0.12 165)",
+        "tonalRamp": [
+          "oklch(0.2 0.1 165)",
+          "oklch(0.3 0.11 165)",
+          "oklch(0.4 0.12 165)",
+          "oklch(0.48 0.12 165)",
+          "oklch(0.6 0.1 165)",
+          "oklch(0.74 0.07 165)",
+          "oklch(0.88 0.04 165)",
+          "oklch(0.96 0.015 165)"
+        ]
+      },
+      "timer-done-chip": {
+        "role": "tertiary",
+        "displayName": "Done Chip",
+        "canonical": "oklch(0.89 0.055 165)",
+        "tonalRamp": [
+          "oklch(0.22 0.055 165)",
+          "oklch(0.34 0.055 165)",
+          "oklch(0.48 0.055 165)",
+          "oklch(0.62 0.055 165)",
+          "oklch(0.76 0.055 165)",
+          "oklch(0.89 0.055 165)",
+          "oklch(0.94 0.035 165)",
+          "oklch(0.98 0.015 165)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Home hero only." },
+      "headline": { "displayName": "Headline", "purpose": "Interior page titles such as Timers." },
+      "title": { "displayName": "Title", "purpose": "Timer note fields sitting on the card." },
+      "body": { "displayName": "Body", "purpose": "Default UI copy on the stain-wash canvas." },
+      "label": { "displayName": "Label", "purpose": "Pills, chips, and Start." },
+      "digits": { "displayName": "Digits", "purpose": "Composer mm:ss tabular lining figures." },
+      "readout": { "displayName": "Readout", "purpose": "Time inside the remainder ring." }
+    },
+    "shadows": [
+      {
+        "name": "paper-lift",
+        "value": "0 1px 2px oklch(0.32 0.04 250 / 0.06), 0 8px 24px oklch(0.32 0.04 250 / 0.04)",
+        "purpose": "Composer and timer cards at rest."
+      },
+      {
+        "name": "mute-rest",
+        "value": "0 1px 2px oklch(0.3 0.04 250 / 0.08)",
+        "purpose": "Hairline mute pill in the page header."
+      },
+      {
+        "name": "paper-card",
+        "value": "0 1px 3px oklch(0.3 0.04 250 / 0.1), 0 1px 2px oklch(0.3 0.04 250 / 0.08)",
+        "purpose": "Default paper cards on tools and dialogs."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px color-mix(in oklch, var(--ring) 45%, transparent)",
+        "purpose": "Focus-visible on chrome controls."
+      },
+      {
+        "name": "timer-focus-ring",
+        "value": "0 0 0 3px color-mix(in oklch, var(--timer-arc) 35%, transparent)",
+        "purpose": "Focus-visible on timer titles, chips, and icon buttons."
+      },
+      {
+        "name": "done-halo",
+        "value": "0 0 0 6px oklch(0.55 0.12 165 / 0.18)",
+        "purpose": "Peak of the done-card pulse. Disabled when reduced motion is requested."
+      }
+    ],
+    "motion": [
+      {
+        "name": "wash-shift",
+        "value": "200ms ease",
+        "purpose": "Timer card background, ink, and shadow when status changes."
+      },
+      {
+        "name": "arc-tick",
+        "value": "200ms linear",
+        "purpose": "Remainder arc dashoffset while running. Off under reduced motion."
+      },
+      {
+        "name": "done-pulse",
+        "value": "1.6s ease-in-out infinite",
+        "purpose": "Teal halo on a finished timer card."
+      },
+      {
+        "name": "row-flash",
+        "value": "180ms ease-out",
+        "purpose": "Counter row highlight after a tally."
+      }
+    ],
+    "breakpoints": [
+      { "name": "timer-compact", "value": "480px" },
+      { "name": "sm", "value": "640px" },
+      { "name": "timer-2col", "value": "720px" },
+      { "name": "md", "value": "768px" },
+      { "name": "timer-3col", "value": "1100px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Stain-blue CTA for chrome actions such as Login.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Login / Sign up</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 2.25rem; padding: 0.5rem 1rem; border: 0; border-radius: 0.525rem; background: var(--primary); color: var(--primary-foreground); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color 150ms ease; } .ds-btn-primary:hover { background: color-mix(in oklch, var(--primary) 90%, transparent); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent); } .ds-btn-primary:active { transform: translateY(0.5px); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Paper button with a wash-line border for secondary chrome actions.",
+      "html": "<button class=\"ds-btn-outline\" type=\"button\">Account</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; height: 2.25rem; padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 0.525rem; background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500; cursor: pointer; box-shadow: 0 1px 2px oklch(0.3 0.04 250 / 0.06); transition: background-color 150ms ease; } .ds-btn-outline:hover { background: var(--accent); color: var(--accent-foreground); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent); }"
+    },
+    {
+      "name": "Coffee Button",
+      "kind": "button",
+      "refersTo": "button-coffee",
+      "description": "Support CTA only — coffee gold, never status or primary.",
+      "html": "<button class=\"ds-btn-coffee\" type=\"button\">Buy me a coffee</button>",
+      "css": ".ds-btn-coffee { display: inline-flex; align-items: center; justify-content: center; height: 2.25rem; padding: 0.5rem 0.75rem; border: 0; border-radius: 0.525rem; background: var(--coffee); color: var(--coffee-foreground); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease; } .ds-btn-coffee:hover { background: color-mix(in oklch, var(--coffee) 85%, transparent); } .ds-btn-coffee:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 45%, transparent); }"
+    },
+    {
+      "name": "Mute Pill",
+      "kind": "button",
+      "refersTo": "mute-pill",
+      "description": "Header chime control on the Timers page.",
+      "html": "<button class=\"ds-mute\" type=\"button\">Chime on</button>",
+      "css": ".ds-mute { display: inline-flex; align-items: center; justify-content: center; height: 2.25rem; padding: 0 0.85rem; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--foreground); font-family: var(--font-sans); font-size: 0.8125rem; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px oklch(0.3 0.04 250 / 0.08); } .ds-mute:hover { background: var(--accent); } .ds-mute:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 45%, transparent); }"
+    },
+    {
+      "name": "Timer Chip",
+      "kind": "chip",
+      "refersTo": "chip-timer",
+      "description": "Fully round stain-preset or add-time chip on a wash card.",
+      "html": "<button class=\"ds-timer-chip\" type=\"button\">+0:30</button>",
+      "css": ".ds-timer-chip { display: inline-flex; align-items: center; justify-content: center; min-height: 2.5rem; padding: 0 0.95rem; border: 0; border-radius: 999px; background: var(--timer-run-chip); color: var(--timer-run-ink); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 650; font-variant-numeric: tabular-nums; cursor: pointer; } .ds-timer-chip:hover { filter: brightness(0.97); } .ds-timer-chip:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--timer-run-arc) 40%, transparent); }"
+    },
+    {
+      "name": "Timer Start",
+      "kind": "button",
+      "refersTo": "button-timer-start",
+      "description": "Full-width pill on the composer, filled with the running arc color.",
+      "html": "<button class=\"ds-timer-start\" type=\"button\">Start</button>",
+      "css": ".ds-timer-start { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 2.6rem; padding: 0 0.95rem; border: 0; border-radius: 999px; background: var(--timer-run-arc); color: var(--primary-foreground); font-family: var(--font-sans); font-size: 0.875rem; font-weight: 650; cursor: pointer; } .ds-timer-start:hover { filter: brightness(0.97); } .ds-timer-start:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--timer-run-arc) 40%, transparent); } .ds-timer-start:disabled { opacity: 0.45; cursor: default; }"
+    },
+    {
+      "name": "Paper Card",
+      "kind": "card",
+      "refersTo": "card-paper",
+      "description": "Default tool surface: paper on stain-wash, 0.9rem corners.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-title\">Differential</p><p class=\"ds-card-body\">Count on the numpad. Eyes stay on the scope.</p></div>",
+      "css": ".ds-card { border: 1px solid var(--border); border-radius: 0.9rem; background: var(--card); color: var(--card-foreground); padding: 0.75rem 1rem; box-shadow: 0 1px 3px oklch(0.3 0.04 250 / 0.1), 0 1px 2px oklch(0.3 0.04 250 / 0.08); font-family: var(--font-sans); } .ds-card-title { margin: 0 0 0.35rem; font-size: 0.95rem; font-weight: 600; } .ds-card-body { margin: 0; color: var(--muted-foreground); font-size: 0.95rem; line-height: 1.5; }"
+    },
+    {
+      "name": "Timer Card",
+      "kind": "custom",
+      "refersTo": "card-timer",
+      "description": "Signature wait: wash hue, hairline remainder arc, tabular time, pill actions.",
+      "html": "<article class=\"ds-timer-card\"><input class=\"ds-timer-title\" value=\"Wright stain\" /><div class=\"ds-timer-ring\"><svg viewBox=\"0 0 112 112\" width=\"112\" height=\"112\" aria-hidden=\"true\"><circle class=\"ds-track\" cx=\"56\" cy=\"56\" r=\"55\" /><circle class=\"ds-arc\" cx=\"56\" cy=\"56\" r=\"55\" stroke-dasharray=\"345.6\" stroke-dashoffset=\"86.4\" transform=\"rotate(-90 56 56)\" /></svg><p class=\"ds-readout\">3:12</p></div><div class=\"ds-chips\"><button type=\"button\">+0:30</button><button type=\"button\">+1:00</button><button type=\"button\">+5:00</button></div><div class=\"ds-actions\"><button type=\"button\">Pause</button><button type=\"button\">Reset</button></div></article>",
+      "css": ".ds-timer-card { --timer-wash: var(--timer-run-wash); --timer-ink: var(--timer-run-ink); --timer-track: var(--timer-run-track); --timer-arc: var(--timer-run-arc); --timer-chip: var(--timer-run-chip); border-radius: 1.35rem; background: var(--timer-wash); color: var(--timer-ink); padding: 0.85rem 1.05rem 1rem; font-family: var(--font-sans); box-shadow: 0 1px 2px oklch(0.32 0.04 250 / 0.06), 0 8px 24px oklch(0.32 0.04 250 / 0.04); } .ds-timer-title { width: 100%; height: 2.25rem; border: 0; border-radius: 0.65rem; background: transparent; color: inherit; font: inherit; font-size: 0.95rem; font-weight: 600; } .ds-timer-title:focus-visible { outline: none; background: color-mix(in oklch, var(--timer-chip) 80%, white); box-shadow: 0 0 0 3px color-mix(in oklch, var(--timer-arc) 35%, transparent); } .ds-timer-ring { position: relative; display: grid; place-items: center; width: 12.75rem; height: 12.75rem; margin: 0.15rem auto 0.7rem; } .ds-timer-ring svg { width: 100%; height: 100%; } .ds-track, .ds-arc { fill: none; } .ds-track { stroke: var(--timer-track); stroke-width: 1.35; } .ds-arc { stroke: var(--timer-arc); stroke-width: 2.1; stroke-linecap: round; } .ds-readout { position: absolute; margin: 0; font-size: 2.65rem; font-weight: 650; letter-spacing: -0.035em; line-height: 1; font-variant-numeric: tabular-nums lining-nums; } .ds-chips, .ds-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.45rem; } .ds-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.85rem; } .ds-chips button, .ds-actions button { min-height: 2.5rem; border: 0; border-radius: 999px; background: var(--timer-chip); color: inherit; font: inherit; font-size: 0.875rem; font-weight: 650; padding: 0 0.95rem; font-variant-numeric: tabular-nums; cursor: pointer; } .ds-actions button { min-height: 3rem; width: 100%; } .ds-chips button:hover, .ds-actions button:hover { filter: brightness(0.97); } .ds-chips button:focus-visible, .ds-actions button:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--timer-arc) 40%, transparent); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Chrome input: wash-line border, md radius, 3px focus ring.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Specimen #\" />",
+      "css": ".ds-input { height: 2.25rem; width: 100%; border: 1px solid var(--input); border-radius: 0.525rem; background: transparent; color: var(--foreground); padding: 0.25rem 0.75rem; font-family: var(--font-sans); font-size: 1rem; } .ds-input::placeholder { color: var(--muted-foreground); } .ds-input:hover { border-color: var(--ring); } .ds-input:focus-visible { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent); }"
+    },
+    {
+      "name": "Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Header link. Active uses accent wash, not a underline or pill.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-link\" href=\"#\">Home</a><a class=\"ds-nav-link ds-nav-link-active\" href=\"#\">Timers</a><a class=\"ds-nav-link\" href=\"#\">Tools</a></nav>",
+      "css": ".ds-nav { display: flex; gap: 0.25rem; font-family: var(--font-sans); } .ds-nav-link { border-radius: 0.525rem; padding: 0.5rem 0.75rem; color: var(--foreground); font-size: 0.875rem; font-weight: 500; text-decoration: none; } .ds-nav-link:hover { background: color-mix(in oklch, var(--accent) 60%, transparent); } .ds-nav-link:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent); } .ds-nav-link-active { background: var(--accent); color: var(--accent-foreground); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Skiptocyte Wash",
+    "overview": "Skiptocyte looks like stain on paper, not like a dashboard. The canvas is a cool wash at hue 236, taken from the logo’s `#4A90B8`. Cards sit slightly lighter as paper. The only loud ink on a typical screen is the primary stain-blue CTA. IBM Plex Sans Variable carries every role — chrome, body, and the large tabular digits a tech reads at a glance.\n\nTimers extend that wash into concurrent rings. A running card is primary-tinted paper with a hairline remainder arc. Pause shifts the whole card to slate-ochre. Done floods teal-green and breathes a halo. Status is the hue, not a badge rack. App chrome (nav, shadcn buttons, paper cards) stays on the 0.65rem radius scale; timer surfaces use fuller 1.35rem cards and fully round pills.\n\nThe world is a bench instrument: dense enough to keep eyes on the scope, quiet enough that color and digits do the talking. It refuses a second display face, hard offset shadows, and a single hero clock with leftover chips stacked underneath.",
+    "keyCharacteristics": [
+      "Hue-236 stain-wash canvas, paper cards, primary CTA",
+      "IBM Plex Sans Variable only; tabular lining digits on clocks and counts",
+      "Soft paper lift; status on timers is wash hue plus a hairline arc",
+      "Pills on timer cards; rounded-md / 0.65rem on app chrome",
+      "Coffee gold reserved for the support CTA, not for status"
+    ],
+    "rules": [
+      {
+        "name": "The Hue-236 Rule",
+        "body": "Identity lives on hue 236. Ochre, teal, coffee, and red are state, support, or alert — never a second brand.",
+        "section": "colors"
+      },
+      {
+        "name": "The Wash-Is-State Rule",
+        "body": "A timer’s status is the card’s wash (and matching ink, track, arc, chip). Do not add a second status language — dots, banners, or color-coded icons — on top of the wash.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Digit Rule",
+        "body": "Clocks, counters, and add-chips use `tabular-nums lining-nums`. Proportional figures are for prose, not for time.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Voice Rule",
+        "body": "IBM Plex Sans Variable is the only family. Do not introduce a display serif, a mono clock face, or a system UI font for chrome.",
+        "section": "typography"
+      },
+      {
+        "name": "The Equal-Ring Rule",
+        "body": "On Timers, every running wait is the same card in a wrapping grid. Do not promote one timer into a hero and demote the rest to chips or a list.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Paper-Lift Rule",
+        "body": "Elevation is a soft dual shadow in ink, never a hard offset or a black slab. The done pulse is a halo in teal, not a bounce or a drop.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Pill-on-Paper Rule",
+        "body": "Fully round pills live on timer wash cards. App chrome stays on the 0.65rem radius scale. Do not pill the nav, and do not square the timer actions.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Hairline Arc Rule",
+        "body": "Remaining time is a thin remainder stroke on a fainter track, not a pie fill, not a thick progress bar, not a linear bar across the card.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep identity on hue 236: canvas, paper, primary, running wash, running arc.",
+      "Do set timer status by recoloring wash, ink, track, arc, and chip together.",
+      "Do set remaining time with a hairline remainder arc (track 1.35, arc 2.1, round cap).",
+      "Do use IBM Plex tabular lining digits for clocks, counters, and time chips.",
+      "Do put timer actions in fully round pills on 1.35rem wash cards, and keep app chrome on the 0.65rem radius scale.",
+      "Do honor reduced motion: no done pulse, no arc dash animation."
+    ],
+    "donts": [
+      "Don't introduce a second typeface or a dedicated clock/mono face.",
+      "Don't use hard offset (neobrutalist) shadows.",
+      "Don't paint a running timer ochre or teal; those hues are pause and done only.",
+      "Don't replace the remainder arc with a pie, a thick ring, or a linear bar.",
+      "Don't use coffee gold for status, alerts, or primary actions.",
+      "Don't stack leftover timers as a list under one hero clock."
+    ]
+  }
+}

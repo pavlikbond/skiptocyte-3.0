@@ -1,0 +1,45 @@
+# Compiled output
+/dist
+/tmp
+/out-tsc
+
+/.firebase
+
+# Node
+/node_modules
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite
+dist-ssr
+*.local
+
+# Env (keep examples)
+.env
+.env.production
+.env.local
+
+# IDEs
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.history/*
+.cursor/
+
+# Angular leftovers
+/.angular/cache
+.sass-cache/
+
+# Coverage / misc
+/coverage
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+logs
+*.log
