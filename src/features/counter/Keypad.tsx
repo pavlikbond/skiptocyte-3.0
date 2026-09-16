@@ -20,8 +20,8 @@ const NUMPAD: { key: string; label: string; className?: string; hideHandset?: bo
   { key: "2", label: "2" },
   { key: "3", label: "3" },
   { key: "Enter", label: "Enter", className: "numpad-enter", hideHandset: true },
-  { key: "0", label: "0", className: "numpad-zero" },
-  { key: ".", label: "." },
+  { key: "0", label: "0", className: "numpad-zero", hideHandset: true },
+  { key: ".", label: ".", hideHandset: true },
 ];
 
 const KEYBOARD = [
@@ -52,8 +52,10 @@ function KeyButton({
   return (
     <button
       type="button"
+      aria-label={bound ? `${label}, ${bound}` : label}
       className={cn(
-        "flex min-h-0 flex-col items-center justify-center rounded-md border border-border bg-background px-0.5 py-0.5 text-sm shadow-sm outline-none hover:bg-accent cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        "flex min-h-0 touch-manipulation select-none flex-col items-center justify-center rounded-md border border-border bg-background px-0.5 py-0.5 text-sm shadow-sm outline-none hover:bg-accent active:bg-accent cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        ctx.isHandset && "min-h-21 px-1 py-2 text-lg",
         ctx.flashKey === keyValue &&
           (ctx.flashTick % 2 === 0 ? "flash-row-a" : "flash-row-b"),
         hideHandset && "hide-handset",
@@ -73,9 +75,16 @@ function KeyButton({
         if (row) ctx.bumpRow(row.id, ctx.increase ? 1 : -1);
       }}
     >
-      <span className="font-semibold leading-none">{label}</span>
+      <span className="font-semibold leading-none tabular-nums">{label}</span>
       {bound ? (
-        <span className="mt-1 max-w-full truncate px-0.5 text-[10px] leading-none text-muted-foreground">
+        <span
+          className={cn(
+            "mt-1 max-w-full px-0.5 text-[10px] leading-none text-muted-foreground",
+            ctx.isHandset
+              ? "mt-1.5 line-clamp-2 text-center text-xs leading-tight"
+              : "truncate",
+          )}
+        >
           {bound}
         </span>
       ) : null}
@@ -129,7 +138,7 @@ export function Keypad() {
       ) : null}
       {layout === "numpad" ? (
         <div className={cn("numpad-grid", ctx.isHandset && "numpad-handset")}>
-          {NUMPAD.map((k) => (
+          {(ctx.isHandset ? NUMPAD.filter((k) => !k.hideHandset) : NUMPAD).map((k) => (
             <KeyButton
               key={k.key}
               keyValue={k.key}

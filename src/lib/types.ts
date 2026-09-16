@@ -173,7 +173,7 @@ export const DEFAULT_PRINT_FIELDS: PrintField[] = [
 export const DEFAULT_PRINT: PrintSettings = {
   reportTitle: "Report",
   paperSize: "Letter",
-  units: "10^9/L",
+  units: "x10^9/L",
   showCell: true,
   showCount: false,
   showRelative: true,

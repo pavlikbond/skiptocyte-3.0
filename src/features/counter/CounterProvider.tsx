@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -44,6 +45,7 @@ import {
   loadLocalPresets,
   loadPrintSettings,
   loadSoundSettings,
+  loadStoredPresets,
   loadViewType,
   saveEstimateSettings,
   saveHistory,
@@ -151,6 +153,7 @@ function pulse<T>(setter: (v: T | null) => void, value: T, ms = 180) {
 
 export function CounterProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const uid = user?.uid ?? null;
   const userDoc = useUserDoc();
   const saveCloudPresets = useSaveCloudPresets();
   const saveCloudSounds = useSaveCloudSounds();
@@ -181,22 +184,32 @@ export function CounterProvider({ children }: { children: ReactNode }) {
 
   const preset = presets.find((p) => p.id === selectedId) ?? presets[0];
 
-  useEffect(() => {
-    const local = ensurePresets(loadLocalPresets());
+  useLayoutEffect(() => {
+    const local = ensurePresets(loadLocalPresets(uid));
     setPresets(local);
     setSelectedId(local[0].id);
     setViewState(loadViewType());
     setKeyboardTypeState(loadKeyboardType());
-    setSoundSettings(loadSoundSettings());
+    setSoundSettings(loadSoundSettings(uid));
     const est = loadEstimateSettings();
     setFieldCountMax(est.fieldCountMax);
     setFieldCountKey(est.fieldCountKey);
     setEstimateCells(est.countedCells);
     setPrint(loadPrintSettings());
-    setHistory(loadHistory());
+    setHistory(loadHistory(uid));
+    setWbcCount(0);
+    setIncrease(true);
+    setUndoStack([]);
+    setMorphology(EMPTY_MORPHOLOGY);
+    setFieldCount(0);
+    setFlashRowId(null);
+    setFlashKey(null);
+    setShake(false);
+    setKeyErrorId(null);
+    setCloudHydrated(false);
     setReady(true);
     void preloadSounds();
-  }, []);
+  }, [uid]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 640px)");
@@ -207,25 +220,26 @@ export function CounterProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!user || !userDoc.data || cloudHydrated) return;
+    if (!uid || !userDoc.data || cloudHydrated) return;
     const data = userDoc.data;
     if (data.presets && data.presets.length > 0) {
       const live = data.presets.map(dbRowsToLive);
       setPresets(live);
       setSelectedId(live[0].id);
+      saveLocalPresets(live, uid);
     } else {
-      const local = loadLocalPresets();
-      void saveCloudPresets.mutateAsync({ presets: local, includeEmail: true });
+      const seed = ensurePresets(loadStoredPresets(uid) ?? loadLocalPresets());
+      setPresets(seed);
+      setSelectedId(seed[0].id);
+      void saveCloudPresets.mutateAsync({ presets: seed, includeEmail: true });
     }
     if (data.tableSettings?.soundSettings) {
       setSoundSettings(data.tableSettings.soundSettings);
+      saveSoundSettings(data.tableSettings.soundSettings, uid);
     }
     setCloudHydrated(true);
-  }, [user, userDoc.data, cloudHydrated, saveCloudPresets]);
-
-  useEffect(() => {
-    if (!user) setCloudHydrated(false);
-  }, [user]);
+    setReady(true);
+  }, [uid, userDoc.data, cloudHydrated, saveCloudPresets]);
 
   const updatePreset = useCallback(
     (updater: (current: Preset) => Preset, resetUndo = false) => {
@@ -286,10 +300,13 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       ...p,
       rows: p.rows.map((r) => ({ ...r, count: 0 })),
     }));
-    saveLocalPresets(stripped);
     persistEstimate(estimateCells);
-    await saveCloudPresets.mutateAsync({ presets: stripped });
-  }, [presets, estimateCells, persistEstimate, saveCloudPresets]);
+    if (uid) {
+      await saveCloudPresets.mutateAsync({ presets: stripped });
+    } else {
+      saveLocalPresets(stripped);
+    }
+  }, [presets, estimateCells, persistEstimate, saveCloudPresets, uid]);
 
   const createPreset = useCallback((name: string, maxWBC: number) => {
     const next = blankPreset(name, maxWBC);
@@ -536,10 +553,10 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     };
     setHistory((list) => {
       const next = [entry, ...list].slice(0, HISTORY_CAP);
-      saveHistory(next);
+      saveHistory(next, uid);
       return next;
     });
-  }, [preset, wbcCount, morphology]);
+  }, [preset, wbcCount, morphology, uid]);
 
   const stats = useMemo(
     () => rowStats(preset?.rows ?? [], wbcCount),
@@ -679,32 +696,32 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       deleteHistoryEntry: (id) => {
         setHistory((list) => {
           const next = list.filter((e) => e.id !== id);
-          saveHistory(next);
+          saveHistory(next, uid);
           return next;
         });
       },
       clearHistory: () => {
         setHistory([]);
-        saveHistory([]);
+        saveHistory([], uid);
       },
       updateSounds: (next) => {
         setSoundSettings(next);
-        saveSoundSettings(next);
-        void saveCloudSounds.mutateAsync(next);
+        if (uid) void saveCloudSounds.mutateAsync(next);
+        else saveSoundSettings(next);
       },
       replacePresets: (next) => {
         const list = ensurePresets(next);
         setPresets(list);
         setSelectedId(list[0].id);
         setUndoStack([]);
-        saveLocalPresets(list);
+        if (uid) void saveCloudPresets.mutateAsync({ presets: list });
+        else saveLocalPresets(list);
       },
       mergePresets: (incoming) => {
-        setPresets((list) => {
-          const next = ensurePresets([...list, ...incoming]);
-          saveLocalPresets(next);
-          return next;
-        });
+        const next = ensurePresets([...presets, ...incoming]);
+        setPresets(next);
+        if (uid) void saveCloudPresets.mutateAsync({ presets: next });
+        else saveLocalPresets(next);
       },
     };
   }, [
@@ -745,7 +762,9 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     bumpEstimateCell,
     bumpField,
     saveCountToHistory,
+    saveCloudPresets,
     saveCloudSounds,
+    uid,
   ]);
 
   return (

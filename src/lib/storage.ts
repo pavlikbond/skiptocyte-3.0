@@ -29,6 +29,11 @@ const KEYS = {
   countHistory: 'countHistory',
 } as const;
 
+/** Guest data uses the bare key; signed-in data stays on-device under `key:uid`. */
+export function accountStorageKey(base: string, uid?: string | null) {
+  return uid ? `${base}:${uid}` : base;
+}
+
 function readJson<T>(key: string): T | null {
   try {
     const raw = localStorage.getItem(key);
@@ -103,29 +108,38 @@ export function migratePresetList(): Preset[] | null {
   return converted;
 }
 
-export function loadLocalPresets(): Preset[] {
-  const stored = readJson<DbPreset[]>(KEYS.presets);
+export function loadStoredPresets(uid?: string | null): Preset[] | null {
+  const stored = readJson<DbPreset[]>(accountStorageKey(KEYS.presets, uid));
   if (stored && Array.isArray(stored) && stored.length > 0) {
     return stored.map(dbRowsToLive);
   }
-  const migrated = migratePresetList();
-  if (migrated) return migrated;
-  return builtInPresets();
+  if (!uid) {
+    const migrated = migratePresetList();
+    if (migrated) return migrated;
+  }
+  return null;
 }
 
-export function saveLocalPresets(presets: Preset[]) {
-  writeJson(KEYS.presets, liveToDb(presets));
+export function loadLocalPresets(uid?: string | null): Preset[] {
+  return loadStoredPresets(uid) ?? builtInPresets();
 }
 
-export function loadSoundSettings(): SoundSettings {
+export function saveLocalPresets(presets: Preset[], uid?: string | null) {
+  writeJson(accountStorageKey(KEYS.presets, uid), liveToDb(presets));
+}
+
+export function loadSoundSettings(uid?: string | null): SoundSettings {
   const stored = readJson<{ soundSettings?: SoundSettings }>(
-    KEYS.tableSettings,
+    accountStorageKey(KEYS.tableSettings, uid),
   );
   return stored?.soundSettings ?? DEFAULT_SOUND;
 }
 
-export function saveSoundSettings(soundSettings: SoundSettings) {
-  writeJson(KEYS.tableSettings, { soundSettings });
+export function saveSoundSettings(
+  soundSettings: SoundSettings,
+  uid?: string | null,
+) {
+  writeJson(accountStorageKey(KEYS.tableSettings, uid), { soundSettings });
 }
 
 export function loadPrintSettings(): PrintSettings {
@@ -199,12 +213,17 @@ export function saveKeyboardType(type: KeyboardType) {
   localStorage.setItem(KEYS.keyboardType, type);
 }
 
-export function loadHistory(): HistoryEntry[] {
-  return readJson<HistoryEntry[]>(KEYS.countHistory) ?? [];
+export function loadHistory(uid?: string | null): HistoryEntry[] {
+  return (
+    readJson<HistoryEntry[]>(accountStorageKey(KEYS.countHistory, uid)) ?? []
+  );
 }
 
-export function saveHistory(entries: HistoryEntry[]) {
-  writeJson(KEYS.countHistory, entries.slice(0, HISTORY_CAP));
+export function saveHistory(entries: HistoryEntry[], uid?: string | null) {
+  writeJson(
+    accountStorageKey(KEYS.countHistory, uid),
+    entries.slice(0, HISTORY_CAP),
+  );
 }
 
 export function ensurePresets(list: Preset[]): Preset[] {

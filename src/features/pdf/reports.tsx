@@ -10,6 +10,7 @@ import {
 } from "@react-pdf/renderer";
 import { estimateValues } from "@/lib/counting";
 import { morphologyFindings } from "@/lib/types";
+import { parseUnits } from "@/lib/units";
 import type {
   DiffRow,
   EstimateCell,
@@ -30,18 +31,32 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#bfd5e2", paddingVertical: 4 },
   th: { fontWeight: 700, backgroundColor: "#e0edf6", paddingVertical: 5 },
   morph: { marginTop: 12 },
+  super: { fontSize: 7, verticalAlign: "super" },
 });
 
 function Units({ units }: { units: string }) {
-  if (!units.includes("^")) return <Text>{units}</Text>;
-  const [base, exp] = units.split("^");
+  const parts = parseUnits(units);
+  if (parts.kind === "plain") return <Text>{parts.text}</Text>;
   return (
     <Text>
-      {base}
-      <Text style={{ fontSize: 8 }}>{exp}</Text>
+      {parts.base}
+      <Text style={styles.super}>{parts.exp}</Text>
+      {parts.rest}
     </Text>
   );
 }
+
+export type DiffReportArgs = {
+  print: PrintSettings;
+  rows: DiffRow[];
+  stats: Map<string, RowStats>;
+  wbcCount: number;
+  corrected: number | null;
+  ancValue: number | null;
+  alcValue: number | null;
+  me: string | null;
+  morphology: MorphologyState;
+};
 
 function DiffDocument({
   print,
@@ -53,17 +68,7 @@ function DiffDocument({
   alcValue,
   me,
   morphology,
-}: {
-  print: PrintSettings;
-  rows: DiffRow[];
-  stats: Map<string, RowStats>;
-  wbcCount: number;
-  corrected: number | null;
-  ancValue: number | null;
-  alcValue: number | null;
-  me: string | null;
-  morphology: MorphologyState;
-}) {
+}: DiffReportArgs) {
   const visible = rows.filter((r) => print.showIgnored || !r.ignore);
   const morphLines = print.showMorphology ? morphologyFindings(morphology) : [];
 
@@ -132,17 +137,19 @@ function DiffDocument({
   );
 }
 
+export type EstimateReportArgs = {
+  print: PrintSettings;
+  fieldCount: number;
+  fieldCountMax: number;
+  cells: EstimateCell[];
+};
+
 function EstimateDocument({
   print,
   fieldCount,
   fieldCountMax,
   cells,
-}: {
-  print: PrintSettings;
-  fieldCount: number;
-  fieldCountMax: number;
-  cells: EstimateCell[];
-}) {
+}: EstimateReportArgs) {
   return (
     <Document>
       <Page size={print.paperSize === "A4" ? "A4" : "LETTER"} style={styles.page}>
@@ -161,20 +168,25 @@ function EstimateDocument({
         <View style={styles.table}>
           <View style={[styles.row, styles.th]}>
             <Text style={{ flex: 2 }}>Name</Text>
+            <Text style={{ flex: 1 }}>Factor</Text>
             <Text style={{ flex: 1 }}>Count</Text>
             <Text style={{ flex: 1 }}>Average</Text>
-            <Text style={{ flex: 1 }}>Factor</Text>
-            <Text style={{ flex: 1 }}>Estimate</Text>
+            <Text style={{ flex: 1.4 }}>
+              Estimate
+              {print.showUnits ? " (" : ""}
+              {print.showUnits ? <Units units={print.units} /> : null}
+              {print.showUnits ? ")" : ""}
+            </Text>
           </View>
           {cells.map((c) => {
             const v = estimateValues(c, fieldCount, fieldCountMax);
             return (
               <View key={c.id} style={styles.row}>
                 <Text style={{ flex: 2 }}>{c.name}</Text>
+                <Text style={{ flex: 1 }}>{c.factor ?? ""}</Text>
                 <Text style={{ flex: 1 }}>{c.count}</Text>
                 <Text style={{ flex: 1 }}>{v.average.toFixed(2)}</Text>
-                <Text style={{ flex: 1 }}>{c.factor ?? ""}</Text>
-                <Text style={{ flex: 1 }}>{v.estimate.toLocaleString("en-US")}</Text>
+                <Text style={{ flex: 1.4 }}>{v.estimate.toLocaleString("en-US")}</Text>
               </View>
             );
           })}
@@ -184,8 +196,19 @@ function EstimateDocument({
   );
 }
 
-async function download(doc: ReactElement<DocumentProps>, filename: string) {
-  const blob = await pdf(doc).toBlob();
+function renderPdfToBlob(doc: ReactElement<DocumentProps>) {
+  return pdf(doc).toBlob();
+}
+
+export function renderDiffBlob(args: DiffReportArgs) {
+  return renderPdfToBlob(<DiffDocument {...args} />);
+}
+
+export function renderEstimateBlob(args: EstimateReportArgs) {
+  return renderPdfToBlob(<EstimateDocument {...args} />);
+}
+
+async function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -194,16 +217,16 @@ async function download(doc: ReactElement<DocumentProps>, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function downloadDiffPdf(args: Parameters<typeof DiffDocument>[0]) {
-  return download(
-    <DiffDocument {...args} />,
+export async function downloadDiffPdf(args: DiffReportArgs) {
+  await download(
+    await renderDiffBlob(args),
     `${args.print.reportTitle || "Report"}.pdf`,
   );
 }
 
-export function downloadEstimatePdf(args: Parameters<typeof EstimateDocument>[0]) {
-  return download(
-    <EstimateDocument {...args} />,
+export async function downloadEstimatePdf(args: EstimateReportArgs) {
+  await download(
+    await renderEstimateBlob(args),
     `${args.print.reportTitle || "Report"}.pdf`,
   );
 }

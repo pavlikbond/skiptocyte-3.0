@@ -1,37 +1,37 @@
 ---
 name: Skiptocyte
-description: Stain-wash laboratory tools — paper cards on hue-236 canvas, IBM Plex digits, primary CTA.
+description: Warm-slide laboratory tools — paper cards on hue-85 cream canvas, IBM Plex digits, stain-blue CTA.
 colors:
-  background: "oklch(0.965 0.012 236)"
+  background: "oklch(0.954 0.014 85)"
   foreground: "oklch(0.28 0.035 250)"
-  card: "oklch(0.985 0.008 236)"
+  card: "oklch(0.994 0.003 85)"
   card-foreground: "oklch(0.25 0.04 250)"
-  popover: "oklch(0.995 0.004 236)"
+  popover: "oklch(0.998 0.002 85)"
   primary: "oklch(0.42 0.1 236)"
   primary-foreground: "oklch(0.98 0.01 236)"
-  secondary: "oklch(0.92 0.03 236)"
+  secondary: "oklch(0.92 0.018 85)"
   secondary-foreground: "oklch(0.3 0.05 245)"
-  muted: "oklch(0.94 0.018 236)"
+  muted: "oklch(0.94 0.01 85)"
   muted-foreground: "oklch(0.45 0.03 245)"
-  accent: "oklch(0.9 0.045 236)"
+  accent: "oklch(0.9 0.033 85)"
   accent-foreground: "oklch(0.28 0.05 245)"
   destructive: "oklch(0.52 0.19 25)"
   destructive-foreground: "oklch(0.98 0.01 25)"
   coffee: "oklch(0.84 0.155 92)"
   coffee-foreground: "oklch(0.28 0.05 70)"
-  border: "oklch(0.86 0.03 236)"
-  input: "oklch(0.86 0.03 236)"
+  border: "oklch(0.83 0.028 85)"
+  input: "oklch(0.83 0.028 85)"
   ring: "oklch(0.48 0.11 236)"
   timer-run-wash: "oklch(0.955 0.028 236)"
   timer-run-ink: "oklch(0.36 0.09 240)"
   timer-run-track: "oklch(0.9 0.04 236)"
   timer-run-arc: "oklch(0.48 0.12 236)"
   timer-run-chip: "oklch(0.91 0.045 236)"
-  timer-pause-wash: "oklch(0.955 0.03 78)"
+  timer-pause-wash: "oklch(0.935 0.042 78)"
   timer-pause-ink: "oklch(0.4 0.07 68)"
-  timer-pause-track: "oklch(0.9 0.04 78)"
+  timer-pause-track: "oklch(0.88 0.048 78)"
   timer-pause-arc: "oklch(0.55 0.1 68)"
-  timer-pause-chip: "oklch(0.91 0.045 78)"
+  timer-pause-chip: "oklch(0.90 0.05 78)"
   timer-done-wash: "oklch(0.945 0.045 165)"
   timer-done-ink: "oklch(0.32 0.08 165)"
   timer-done-track: "oklch(0.88 0.05 165)"
@@ -198,14 +198,14 @@ components:
 
 **Creative North Star: "Skiptocyte Wash"**
 
-Skiptocyte looks like stain on paper, not like a dashboard. The canvas is a cool wash at hue 236, taken from the logo’s `#4A90B8`. Cards sit slightly lighter as paper. The only loud ink on a typical screen is the primary stain-blue CTA. IBM Plex Sans Variable carries every role — chrome, body, and the large tabular digits a tech reads at a glance.
+Skiptocyte looks like stain on paper, not like a dashboard. The canvas is a warm slide at hue 85 — cream bench paper. Cards sit as near-white sheets on that bench. The only loud ink on a typical screen is the primary stain-blue CTA, taken from the logo’s `#4A90B8`. IBM Plex Sans Variable carries every role — chrome, body, and the large tabular digits a tech reads at a glance.
 
 Timers extend that wash into concurrent rings. A running card is primary-tinted paper with a hairline remainder arc. Pause shifts the whole card to slate-ochre. Done floods teal-green and breathes a halo. Status is the hue, not a badge rack. App chrome (nav, shadcn buttons, paper cards) stays on the 0.65rem radius scale; timer surfaces use fuller 1.35rem cards and fully round pills.
 
 The world is a bench instrument: dense enough to keep eyes on the scope, quiet enough that color and digits do the talking. It refuses a second display face, hard offset shadows, and a single hero clock with leftover chips stacked underneath.
 
 **Key Characteristics:**
-- Hue-236 stain-wash canvas, paper cards, primary CTA
+- Warm-slide cream canvas, paper cards, stain-blue CTA
 - IBM Plex Sans Variable only; tabular lining digits on clocks and counts
 - Soft paper lift; status on timers is wash hue plus a hairline arc
 - Pills on timer cards; `rounded-md` / 0.65rem on app chrome
@@ -213,7 +213,7 @@ The world is a bench instrument: dense enough to keep eyes on the scope, quiet e
 
 ## Colors
 
-The palette is one stain-blue family (hue 236) plus two state hues on timers (ochre 78, teal 165) and a reserved coffee gold.
+The palette is a warm-slide canvas (hue 85) with a stain-blue action family (hue 236), two timer state hues (ochre 78, teal 165), and a reserved coffee gold.
 
 ### Primary
 - **Stain Blue**: The CTA, focus ring, running remainder arc, and count-heat start. Taken from the logo. On any given screen it should stay the action, not the fill.
@@ -222,9 +222,9 @@ The palette is one stain-blue family (hue 236) plus two state hues on timers (oc
 - **Coffee Gold**: Buy-me-a-coffee and the dedicated coffee button only. Not a status color and not a second primary.
 
 ### Neutral
-- **Stain Wash** (`background`): Page canvas.
+- **Warm Slide** (`background`): Cream bench canvas. Paper sits above it; stain-blue is reserved for action.
 - **Scope Ink** (`foreground`): Body text; slightly cooler (hue 250) than the wash.
-- **Paper** (`card`): Default elevated surface for tools, tables, dialogs. **Paper Ink** (`card-foreground`) sits a step darker than body ink.
+- **Paper** (`card`): Near-white elevated surface for tools, tables, dialogs. **Paper Ink** (`card-foreground`) sits a step darker than body ink.
 - **High Paper** (`popover`): Menus and overlays, a step lighter than paper.
 - **Wash Tint** (`secondary` / `muted` / `accent`): Quiet fills, hover washes, active nav. Same hue, more chroma as the interaction gets closer.
 - **Quiet Ink** (`muted-foreground`): Supporting copy, empty states, page ledes.
@@ -242,7 +242,7 @@ Running stays inside the stain-blue family. Pause leaves it for slate-ochre. Don
 
 Dark mode keeps the same roles on a navy canvas (`oklch(0.18 0.022 250)`) with a lifted primary (`oklch(0.72 0.09 230)`). Timer washes darken in place; they do not swap identity hues.
 
-**The Hue-236 Rule.** Identity lives on hue 236. Ochre, teal, coffee, and red are state, support, or alert — never a second brand.
+**The Stain-Blue Rule.** Action lives on hue 236: primary, focus ring, running remainder. The page canvas is warm slide (hue 85). Ochre, teal, coffee, and red are state, support, or alert — never a second brand.
 
 **The Wash-Is-State Rule.** A timer’s status is the card’s wash (and matching ink, track, arc, chip). Do not add a second status language — dots, banners, or color-coded icons — on top of the wash.
 
@@ -339,7 +339,7 @@ Header control: paper fill, Wash Line, fully round, 2.25rem, 0.8125rem / 600. Ho
 ## Do's and Don'ts
 
 ### Do:
-- **Do** keep identity on hue 236: canvas, paper, primary, running wash, running arc.
+- **Do** keep the canvas on warm slide (hue 85) and actions on stain-blue (primary, running wash, running arc).
 - **Do** set timer status by recoloring wash, ink, track, arc, and chip together.
 - **Do** set remaining time with a hairline remainder arc (track 1.35, arc 2.1, round cap).
 - **Do** use IBM Plex tabular lining digits for clocks, counters, and time chips.

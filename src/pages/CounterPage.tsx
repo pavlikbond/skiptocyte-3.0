@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DiffTable } from "@/features/counter/DiffTable";
 import { Keypad } from "@/features/counter/Keypad";
 import { MorphologyPanel } from "@/features/counter/MorphologyPanel";
+import { useAuth } from "@/features/auth/AuthProvider";
 import { useCounter } from "@/features/counter/CounterProvider";
 import { EstimateTable } from "@/features/estimate/EstimateTable";
 import { PrintDialog } from "@/features/pdf/PrintDialog";
@@ -27,6 +28,11 @@ import { SoundDialog } from "@/features/sounds/SoundDialog";
 import { cn } from "@/lib/utils";
 
 export function CounterPage() {
+  const { user } = useAuth();
+  return <CounterScreen key={user?.uid ?? "guest"} />;
+}
+
+function CounterScreen() {
   const ctx = useCounter();
   const [clearOpen, setClearOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
@@ -139,9 +145,11 @@ export function CounterPage() {
         <Card
           className={cn(
             "max-w-full self-start",
-            ctx.keyboardType === "keyboard" && !ctx.isHandset
-              ? "w-full min-w-[min(100%,36rem)] max-w-[46rem] flex-1"
-              : "w-[min(100%,21rem)] shrink-0",
+            ctx.isHandset
+              ? "w-full"
+              : ctx.keyboardType === "keyboard"
+                ? "w-full min-w-[min(100%,36rem)] max-w-[46rem] flex-1"
+                : "w-[min(100%,21rem)] shrink-0",
           )}
         >
           <div className={cn("mb-3 text-center text-3xl font-bold tabular-nums", ctx.shake && "shake")}>
@@ -190,20 +198,26 @@ export function CounterPage() {
               </div>
             </div>
           ) : null}
-          <div className="mb-3 flex justify-center gap-2">
+          <div className={cn("mb-3 flex gap-2", ctx.isHandset ? "w-full" : "justify-center")}>
             <Button
               variant={ctx.increase ? "default" : "outline"}
+              className={ctx.isHandset ? "h-11 min-h-11 flex-1" : undefined}
               onClick={() => ctx.setIncrease(true)}
             >
               +
             </Button>
             <Button
               variant={!ctx.increase ? "default" : "outline"}
+              className={ctx.isHandset ? "h-11 min-h-11 flex-1" : undefined}
               onClick={() => ctx.setIncrease(false)}
             >
               −
             </Button>
-            <Button variant="outline" onClick={ctx.undo}>
+            <Button
+              variant="outline"
+              className={ctx.isHandset ? "h-11 min-h-11 flex-1" : undefined}
+              onClick={ctx.undo}
+            >
               Undo
             </Button>
           </div>

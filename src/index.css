@@ -75,38 +75,38 @@
 }
 
 :root {
-  /* Hue 236 from logo #4A90B8. Canvas is stain-wash; cards are paper; primary is the CTA. */
+  /* Canvas is warm slide paper (hue 85). Primary CTA stays logo stain-blue 236. */
   --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans Fallback", ui-sans-serif,
     system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --radius: 0.65rem;
-  --background: oklch(0.965 0.012 236);
+  --background: oklch(0.954 0.014 85);
   --foreground: oklch(0.28 0.035 250);
-  --card: oklch(0.985 0.008 236);
+  --card: oklch(0.994 0.003 85);
   --card-foreground: oklch(0.25 0.04 250);
-  --popover: oklch(0.995 0.004 236);
+  --popover: oklch(0.998 0.002 85);
   --popover-foreground: oklch(0.25 0.04 250);
   --primary: oklch(0.42 0.1 236);
   --primary-foreground: oklch(0.98 0.01 236);
-  --secondary: oklch(0.92 0.03 236);
+  --secondary: oklch(0.92 0.018 85);
   --secondary-foreground: oklch(0.3 0.05 245);
-  --muted: oklch(0.94 0.018 236);
+  --muted: oklch(0.94 0.01 85);
   --muted-foreground: oklch(0.45 0.03 245);
-  --accent: oklch(0.9 0.045 236);
+  --accent: oklch(0.9 0.033 85);
   --accent-foreground: oklch(0.28 0.05 245);
   --destructive: oklch(0.52 0.19 25);
   --destructive-foreground: oklch(0.98 0.01 25);
   --coffee: oklch(0.84 0.155 92);
   --coffee-foreground: oklch(0.28 0.05 70);
-  --border: oklch(0.86 0.03 236);
-  --input: oklch(0.86 0.03 236);
+  --border: oklch(0.83 0.028 85);
+  --input: oklch(0.83 0.028 85);
   --ring: oklch(0.48 0.11 236);
-  --sidebar: oklch(0.97 0.014 236);
+  --sidebar: oklch(0.938 0.018 85);
   --sidebar-foreground: oklch(0.28 0.035 250);
   --sidebar-primary: oklch(0.42 0.1 236);
   --sidebar-primary-foreground: oklch(0.98 0.01 236);
-  --sidebar-accent: oklch(0.92 0.03 236);
+  --sidebar-accent: oklch(0.92 0.018 85);
   --sidebar-accent-foreground: oklch(0.3 0.05 245);
-  --sidebar-border: oklch(0.9 0.025 236);
+  --sidebar-border: oklch(0.84 0.024 85);
   --sidebar-ring: oklch(0.48 0.11 236);
   --timer-run-wash: oklch(0.955 0.028 236);
   --timer-run-ink: oklch(0.36 0.09 240);
@@ -138,11 +138,11 @@
   --timer-run-berry-track: oklch(0.9 0.06 325);
   --timer-run-berry-arc: oklch(0.48 0.16 325);
   --timer-run-berry-chip: oklch(0.91 0.07 325);
-  --timer-pause-wash: oklch(0.955 0.03 78);
+  --timer-pause-wash: oklch(0.935 0.042 78);
   --timer-pause-ink: oklch(0.4 0.07 68);
-  --timer-pause-track: oklch(0.9 0.04 78);
+  --timer-pause-track: oklch(0.88 0.048 78);
   --timer-pause-arc: oklch(0.55 0.1 68);
-  --timer-pause-chip: oklch(0.91 0.045 78);
+  --timer-pause-chip: oklch(0.90 0.05 78);
   --timer-done-wash: oklch(0.945 0.045 165);
   --timer-done-ink: oklch(0.32 0.08 165);
   --timer-done-track: oklch(0.88 0.05 165);
@@ -153,9 +153,9 @@
 .dark {
   --background: oklch(0.18 0.022 250);
   --foreground: oklch(0.9 0.02 230);
-  --card: oklch(0.235 0.032 250);
+  --card: oklch(0.26 0.038 250);
   --card-foreground: oklch(0.9 0.02 230);
-  --popover: oklch(0.235 0.032 250);
+  --popover: oklch(0.275 0.036 250);
   --popover-foreground: oklch(0.9 0.02 230);
   --primary: oklch(0.72 0.09 230);
   --primary-foreground: oklch(0.22 0.04 250);
@@ -397,15 +397,11 @@ a[href] {
     display: none;
   }
   .numpad-handset {
-    grid-template-columns: repeat(3, 4.5rem);
-    grid-template-rows: repeat(4, 4.5rem);
-  }
-  .numpad-handset .numpad-plus,
-  .numpad-handset .numpad-enter {
-    display: none;
-  }
-  .numpad-handset .numpad-zero {
-    grid-column: 1 / span 2;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+    grid-auto-rows: minmax(5.25rem, auto);
+    gap: 0.4rem;
   }
 }
 

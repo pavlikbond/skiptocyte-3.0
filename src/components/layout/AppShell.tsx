@@ -1,5 +1,5 @@
 import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -7,6 +7,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { HistorySidebar } from "@/features/history/HistoryDrawer";
+import { logPageView } from "@/lib/firebase";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,6 +124,10 @@ export function AppShell() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const isCounter = location.pathname === "/differential";
+
+  useEffect(() => {
+    void logPageView(location.pathname + location.search);
+  }, [location.pathname, location.search]);
 
   return (
     <SidebarProvider

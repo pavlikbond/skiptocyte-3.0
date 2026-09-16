@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -48,7 +48,6 @@ function heatClass(n: number) {
 
 export function HomePage() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [counts, setCounts] = useState(emptyCounts);
   const [flashCell, setFlashCell] = useState<CellName | null>(null);
   const [flashTick, setFlashTick] = useState(0);
@@ -123,17 +122,17 @@ export function HomePage() {
           One hand on the numpad. A free WBC differential counter built for the bench. Works fully
           offline.
         </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-stretch">
           <Button size="lg" className="w-full sm:w-auto" asChild>
             <Link to="/differential">WBC Counter</Link>
           </Button>
           {user ? (
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => void logout()}>
+            <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={() => void logout()}>
               Log out
             </Button>
           ) : (
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => void navigate("/login")}>
-              Login / Signup
+            <Button variant="outline" size="lg" className="w-full sm:w-auto" asChild>
+              <Link to="/login">Login / Signup</Link>
             </Button>
           )}
         </div>

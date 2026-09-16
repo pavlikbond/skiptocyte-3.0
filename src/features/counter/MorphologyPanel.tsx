@@ -1,4 +1,5 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useCounter } from "@/features/counter/CounterProvider";
 import { GRADE_MORPH_ITEMS } from "@/lib/types";
@@ -56,16 +57,17 @@ export function MorphologyPanel() {
                 <option value="increased">Increased</option>
               </select>
             </div>
-            <label className="flex items-center justify-between gap-2 text-sm">
-              Giant platelets
-              <input
-                type="checkbox"
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <Label htmlFor="giant-platelets">Giant platelets</Label>
+              <Checkbox
+                id="giant-platelets"
+                className="h-5 w-5 cursor-pointer"
                 checked={morphology.giantPlatelets}
-                onChange={(e) =>
-                  setMorphology({ ...morphology, giantPlatelets: e.target.checked })
+                onCheckedChange={(v) =>
+                  setMorphology({ ...morphology, giantPlatelets: Boolean(v) })
                 }
               />
-            </label>
+            </div>
           </div>
         </AccordionContent>
       </AccordionItem>
