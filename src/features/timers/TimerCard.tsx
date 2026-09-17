@@ -119,7 +119,7 @@ export function TimerCard({
           />
         </svg>
         {canEditTime ? (
-          <div id={timeId} className="timer-readout-edit">
+          <div id={timeId} className="timer-readout-edit" aria-label={formatTimer(remaining)}>
             <TimeFields idPrefix={timeId} ms={remaining} onChange={onSetRemaining} compact />
           </div>
         ) : (
