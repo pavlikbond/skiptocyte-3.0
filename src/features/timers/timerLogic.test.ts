@@ -12,6 +12,7 @@ import {
   resetTimer,
   resumeTimer,
   ringProgress,
+  setRemaining,
   setRunColor,
   settleAll,
 } from "./timerLogic";
@@ -139,6 +140,42 @@ describe("controls", () => {
     const next = addTime(t, 30_000, 100);
     expect(next.status).toBe("running");
     expect(liveRemaining(next, 100)).toBe(30_000);
+  });
+
+  it("edits remaining on a reset timer and redefines the wait", () => {
+    const t = timer({ status: "paused", remainingMs: 60_000, durationMs: 60_000, initialMs: 60_000 });
+    const next = setRemaining(t, 180_000);
+    expect(next.remainingMs).toBe(180_000);
+    expect(next.durationMs).toBe(180_000);
+    expect(next.initialMs).toBe(180_000);
+    expect(next.status).toBe("paused");
+  });
+
+  it("edits remaining on a paused timer without changing the original duration", () => {
+    const t = timer({ status: "paused", remainingMs: 20_000, durationMs: 60_000, initialMs: 60_000 });
+    const next = setRemaining(t, 45_000);
+    expect(next.remainingMs).toBe(45_000);
+    expect(next.durationMs).toBe(85_000);
+    expect(next.initialMs).toBe(60_000);
+  });
+
+  it("leaves running and done timers locked", () => {
+    const running = timer({ status: "running", endsAt: 20_000 });
+    const done = timer({ status: "done", remainingMs: 0 });
+    expect(setRemaining(running, 10_000)).toBe(running);
+    expect(setRemaining(done, 10_000)).toBe(done);
+  });
+
+  it("keeps the original duration after clearing a reset timer, then accepts a new wait", () => {
+    const t = timer({ status: "paused", remainingMs: 60_000, durationMs: 60_000, initialMs: 60_000 });
+    const cleared = setRemaining(t, 0);
+    expect(cleared.remainingMs).toBe(0);
+    expect(cleared.durationMs).toBe(0);
+    expect(cleared.initialMs).toBe(60_000);
+    const next = setRemaining(cleared, 120_000);
+    expect(next.remainingMs).toBe(120_000);
+    expect(next.durationMs).toBe(120_000);
+    expect(next.initialMs).toBe(120_000);
   });
 });
 

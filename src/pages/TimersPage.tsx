@@ -18,6 +18,7 @@ export function TimersPage() {
     toggleMute,
     toggleTimerMute,
     setRunColor,
+    setRemaining,
   } = useTimers();
 
   return (
@@ -60,6 +61,7 @@ export function TimersPage() {
               onRemove={() => remove(timer.id)}
               onMute={() => toggleTimerMute(timer.id)}
               onColor={(color) => setRunColor(timer.id, color)}
+              onSetRemaining={(ms) => setRemaining(timer.id, ms)}
             />
           ))}
         </div>

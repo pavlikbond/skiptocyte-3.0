@@ -9,6 +9,7 @@ import {
   renameTimer,
   resetTimer,
   resumeTimer,
+  setRemaining as applyRemaining,
   setRunColor as applyRunColor,
   setTimerMuted,
   settleAll,
@@ -144,6 +145,10 @@ export function useTimers() {
     setTimers((list) => list.map((item) => (item.id === id ? renameTimer(item, title) : item)));
   }, []);
 
+  const setRemaining = useCallback((id: string, remainingMs: number) => {
+    setTimers((list) => list.map((item) => (item.id === id ? applyRemaining(item, remainingMs) : item)));
+  }, []);
+
   const remove = useCallback((id: string) => {
     setTimers((list) => list.filter((item) => item.id !== id));
   }, []);
@@ -183,5 +188,6 @@ export function useTimers() {
     toggleMute,
     toggleTimerMute,
     setRunColor,
+    setRemaining,
   };
 }

@@ -1,4 +1,5 @@
 import { Pause, Play, RotateCcw, Square, Trash2, Volume2, VolumeX } from "lucide-react";
+import { TimeFields } from "./TimeFields";
 import { TimerColorPicker } from "./TimerColorPicker";
 import { ADD_CHIPS } from "./types";
 import { formatTimer, liveRemaining, liveStatus, ringProgress } from "./timerLogic";
@@ -20,6 +21,7 @@ type Props = {
   onRemove: () => void;
   onMute: () => void;
   onColor: (color: TimerRunColor) => void;
+  onSetRemaining: (ms: number) => void;
 };
 
 export function TimerCard({
@@ -33,6 +35,7 @@ export function TimerCard({
   onRemove,
   onMute,
   onColor,
+  onSetRemaining,
 }: Props) {
   const status = liveStatus(timer, now);
   const remaining = liveRemaining(timer, now);
@@ -40,6 +43,8 @@ export function TimerCard({
   const offset = CIRC * (1 - progress);
   const titleId = `timer-title-${timer.id}`;
   const timeId = `timer-time-${timer.id}`;
+  const canEditTime = status === "paused";
+  const canStart = remaining > 0;
 
   const primary =
     status === "running" ? (
@@ -52,6 +57,7 @@ export function TimerCard({
         type="button"
         className="timer-pill"
         onClick={onResume}
+        disabled={status !== "done" && !canStart}
         aria-label={status === "done" ? `Restart ${label(timer)}` : `Resume ${label(timer)}`}
       >
         <Play />
@@ -112,13 +118,19 @@ export function TimerCard({
             transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
           />
         </svg>
-        <p
-          id={timeId}
-          className={remaining >= 3_600_000 ? "timer-readout timer-readout-long" : "timer-readout"}
-          aria-live={status === "done" ? "assertive" : "off"}
-        >
-          {status === "done" ? "0:00" : formatTimer(remaining)}
-        </p>
+        {canEditTime ? (
+          <div id={timeId} className="timer-readout-edit">
+            <TimeFields idPrefix={timeId} ms={remaining} onChange={onSetRemaining} compact />
+          </div>
+        ) : (
+          <p
+            id={timeId}
+            className={remaining >= 3_600_000 ? "timer-readout timer-readout-long" : "timer-readout"}
+            aria-live={status === "done" ? "assertive" : "off"}
+          >
+            {status === "done" ? "0:00" : formatTimer(remaining)}
+          </p>
+        )}
         {status === "done" ? <p className="timer-done-label">Done</p> : null}
       </div>
 

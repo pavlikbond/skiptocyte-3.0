@@ -1009,7 +1009,8 @@ a[href] {
   color: var(--primary-foreground);
 }
 
-.timer-start:disabled {
+.timer-start:disabled,
+.timer-pill:disabled {
   opacity: 0.45;
 }
 
@@ -1069,14 +1070,56 @@ a[href] {
   transition: stroke-dashoffset 200ms linear, stroke 200ms ease;
 }
 
-.timer-readout {
+.timer-readout,
+.timer-readout-edit {
   position: absolute;
   margin: 0;
+}
+
+.timer-readout {
   font-size: 2.65rem;
   font-weight: 650;
   letter-spacing: -0.035em;
   line-height: 1;
   font-variant-numeric: tabular-nums lining-nums;
+}
+
+.timer-readout-edit {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.timer-readout-edit .timer-draft-time {
+  pointer-events: auto;
+}
+
+.timer-draft-time-ring {
+  margin-top: 0;
+  gap: 0.02rem;
+  max-width: 11.2rem;
+}
+
+.timer-draft-time-ring .timer-digit {
+  width: 2.2rem;
+  font-size: 1.62rem;
+  padding: 0 0.04rem 0.08rem;
+}
+
+.timer-draft-time-ring .timer-colon {
+  font-size: 1.4rem;
+  margin-top: 0.1rem;
+}
+
+.timer-draft-time-ring .timer-unit {
+  gap: 0.16rem;
+}
+
+.timer-draft-time-ring .timer-unit-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.05em;
+  margin-top: 0;
 }
 
 .timer-readout-long {
@@ -1125,6 +1168,15 @@ a[href] {
   }
   .timer-colon {
     margin-top: 0.18rem;
+  }
+  .timer-draft-time-ring .timer-digit {
+    width: 2.05rem;
+    font-size: 1.45rem;
+    padding-inline: 0.04rem;
+  }
+  .timer-draft-time-ring .timer-colon {
+    font-size: 1.25rem;
+    margin-top: 0.08rem;
   }
   .timer-readout {
     font-size: 2.55rem;

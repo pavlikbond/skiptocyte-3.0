@@ -132,6 +132,30 @@ export function resetTimer(timer: BenchTimer): BenchTimer {
   };
 }
 
+/** Set remaining while paused (including after reset). Running and done stay locked. */
+export function setRemaining(timer: BenchTimer, remainingMs: number): BenchTimer {
+  if (timer.status !== "paused") return timer;
+  const ms = clampMs(remainingMs);
+  const fullWait = timer.remainingMs >= timer.durationMs;
+  if (fullWait) {
+    return {
+      ...timer,
+      remainingMs: ms,
+      durationMs: ms,
+      initialMs: ms > 0 ? ms : timer.initialMs,
+      endsAt: null,
+    };
+  }
+  const elapsed = Math.max(0, timer.durationMs - timer.remainingMs);
+  const duration = clampMs(elapsed + ms);
+  return {
+    ...timer,
+    remainingMs: ms,
+    durationMs: duration > 0 ? duration : timer.durationMs,
+    endsAt: null,
+  };
+}
+
 export function addTime(timer: BenchTimer, addMs: number, now: number): BenchTimer {
   const extra = clampMs(addMs);
   if (extra <= 0) return timer;
