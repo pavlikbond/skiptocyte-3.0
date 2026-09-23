@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { presetFromHistory, reportRowsFromHistory } from "./history";
+import { historyLabel, HISTORY_LABEL_MAX, presetFromHistory, reportRowsFromHistory } from "./history";
 import type { HistoryEntry, Preset } from "./types";
 
 function historyEntry(
@@ -25,6 +25,13 @@ function historyEntry(
     },
   };
 }
+
+describe("historyLabel", () => {
+  it("keeps spaces while typing and caps the length", () => {
+    expect(historyLabel(" morning diff ")).toBe(" morning diff ");
+    expect(historyLabel("a".repeat(HISTORY_LABEL_MAX + 12))).toHaveLength(HISTORY_LABEL_MAX);
+  });
+});
 
 describe("presetFromHistory", () => {
   it("restores self-contained history rows and their counts", () => {

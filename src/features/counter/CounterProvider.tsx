@@ -74,7 +74,7 @@ import {
   saveViewType,
   loadViewType,
 } from "@/lib/storage";
-import { presetFromHistory } from "@/lib/history";
+import { historyLabel, presetFromHistory } from "@/lib/history";
 import type {
   EstimateCell,
   HistoryEntry,
@@ -808,6 +808,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     const entry: HistoryEntry = {
       id: newId(),
       savedAt: Date.now(),
+      label: "",
       presetName: sourceLabel,
       tally: tally(preset.rows),
       maxWBC: preset.maxWBC,
@@ -834,6 +835,18 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, [authLoading, morphology, preset, setupSource, uid, wbcCount]);
+
+  const renameHistoryEntry = useCallback((id: string, label: string) => {
+    if (authLoading) return;
+    const nextLabel = historyLabel(label);
+    setHistory((list) => {
+      const next = list.map((entry) =>
+        entry.id === id ? { ...entry, label: nextLabel } : entry,
+      );
+      saveHistory(next, uid);
+      return next;
+    });
+  }, [authLoading, uid]);
 
   const stats = useMemo(
     () => rowStats(preset.rows, wbcCount),
@@ -988,6 +1001,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     bumpField,
     saveCountToHistory,
     loadHistoryEntry,
+    renameHistoryEntry,
     deleteHistoryEntry: (id) => {
       if (authLoading) return;
       setHistory((list) => {
@@ -1068,6 +1082,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     bumpField,
     saveCountToHistory,
     loadHistoryEntry,
+    renameHistoryEntry,
     authLoading,
     uid,
     saveCloudSounds,

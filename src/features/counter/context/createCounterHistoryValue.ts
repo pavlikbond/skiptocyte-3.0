@@ -11,6 +11,7 @@ export function createCounterHistoryValue(
     history: value.history,
     saveCountToHistory: value.saveCountToHistory,
     loadHistoryEntry: value.loadHistoryEntry,
+    renameHistoryEntry: value.renameHistoryEntry,
     deleteHistoryEntry: value.deleteHistoryEntry,
     clearHistory: value.clearHistory,
   };

@@ -79,6 +79,7 @@ export type CounterContextValue = {
   bumpField: (delta: 1 | -1) => void;
   saveCountToHistory: () => void;
   loadHistoryEntry: (id: string, force?: boolean) => boolean;
+  renameHistoryEntry: (id: string, label: string) => void;
   deleteHistoryEntry: (id: string) => void;
   clearHistory: () => void;
   updateSounds: (next: SoundSettings) => void;
@@ -160,6 +161,7 @@ export type CounterHistoryValue = Pick<
   | "history"
   | "saveCountToHistory"
   | "loadHistoryEntry"
+  | "renameHistoryEntry"
   | "deleteHistoryEntry"
   | "clearHistory"
 >;

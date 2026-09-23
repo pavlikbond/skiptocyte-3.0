@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 import {
   Sidebar,
   SidebarContent,
@@ -28,8 +29,13 @@ import {
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useCounterHistory } from "@/features/counter/context/useCounterHistory";
 import { PrintDialog } from "@/features/pdf/PrintDialog";
+import { HISTORY_LABEL_MAX } from "@/lib/history";
 import type { HistoryEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+function historyCardName(entry: HistoryEntry) {
+  return entry.label?.trim() || entry.presetName;
+}
 
 export function HistorySidebar() {
   const { user, loading: authLoading } = useAuth();
@@ -106,6 +112,7 @@ export function HistorySidebar() {
                     key={entry.id}
                     entry={entry}
                     onLoad={() => loadEntry(entry)}
+                    onLabel={(label) => ctx.renameHistoryEntry(entry.id, label)}
                     onDownload={() => {
                       if (isMobile) setOpenMobile(false);
                       setPrintEntry(entry);
@@ -145,7 +152,7 @@ export function HistorySidebar() {
           <AlertDialogHeader>
             <AlertDialogTitle>Load this saved count?</AlertDialogTitle>
             <AlertDialogDescription>
-              This replaces the active count with the {pendingLoad?.presetName} snapshot.
+              This replaces the active count with the {pendingLoad ? historyCardName(pendingLoad) : "saved"} snapshot.
               The snapshot loads as a temporary setup, not a preset.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -177,16 +184,20 @@ export function HistorySidebar() {
 function HistoryEntryItem({
   entry,
   onLoad,
+  onLabel,
   onDownload,
   onDelete,
 }: {
   entry: HistoryEntry;
   onLoad: () => void;
+  onLabel: (label: string) => void;
   onDownload: () => void;
   onDelete: () => void;
 }) {
   const tallyLabel = `${entry.tally}/${entry.maxWBC}`;
   const ancLabel = entry.anc != null ? ` · ANC ${entry.anc}` : "";
+  const cardName = historyCardName(entry);
+  const labelId = `history-label-${entry.id}`;
 
   return (
     <SidebarMenuItem
@@ -199,16 +210,33 @@ function HistoryEntryItem({
         "group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:shadow-none group-data-[collapsible=icon]:hover:shadow-none",
       )}
     >
+      <div className="pt-2 pr-14 pl-2 group-data-[collapsible=icon]:hidden">
+        <label className="sr-only" htmlFor={labelId}>
+          Label for {entry.presetName} count
+        </label>
+        <Input
+          id={labelId}
+          value={entry.label ?? ""}
+          maxLength={HISTORY_LABEL_MAX}
+          placeholder="Label this count"
+          autoComplete="off"
+          spellCheck
+          className="h-8 bg-transparent px-2 text-sm font-semibold shadow-none placeholder:font-medium dark:bg-transparent md:text-sm"
+          onChange={(event) => onLabel(event.target.value)}
+          onKeyDown={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+        />
+      </div>
       <SidebarMenuButton
         className={cn(
-          "h-auto cursor-pointer items-start py-2 pr-12 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:pr-2",
+          "h-auto cursor-pointer items-start px-2 pt-1 pr-2! pb-2 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:p-2!",
           "hover:bg-transparent hover:text-card-foreground",
           "active:bg-transparent active:text-card-foreground",
           "focus-visible:ring-[3px] focus-visible:ring-sidebar-ring/50",
           "group-data-[collapsible=icon]:hover:bg-sidebar-accent group-data-[collapsible=icon]:hover:text-sidebar-accent-foreground",
           "group-data-[collapsible=icon]:active:bg-sidebar-accent group-data-[collapsible=icon]:active:text-sidebar-accent-foreground",
         )}
-        tooltip={`Load ${entry.presetName} · ${tallyLabel}`}
+        tooltip={`Load ${cardName} · ${tallyLabel}`}
         onClick={onLoad}
       >
         <ClipboardList />
@@ -224,16 +252,16 @@ function HistoryEntryItem({
         </div>
       </SidebarMenuButton>
       <SidebarMenuAction
-        aria-label={`Download PDF of ${entry.presetName} count`}
-        className="text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        aria-label={`Download PDF of ${cardName} count`}
+        className="top-3.5! text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         onClick={onDownload}
       >
         <Download />
       </SidebarMenuAction>
       <SidebarMenuAction
         showOnHover
-        aria-label={`Delete ${entry.presetName} count`}
-        className="right-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive peer-hover/menu-button:text-muted-foreground"
+        aria-label={`Delete ${cardName} count`}
+        className="top-3.5! right-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive peer-hover/menu-button:text-muted-foreground"
         onClick={onDelete}
       >
         <Trash2 />

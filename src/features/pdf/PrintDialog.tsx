@@ -294,6 +294,7 @@ export function PrintDialog({
           <DialogTitle>Print report</DialogTitle>
           {snapshot ? (
             <p className="text-sm text-muted-foreground">
+              {snapshot.label?.trim() ? `${snapshot.label.trim()} · ` : ""}
               {snapshot.presetName} · {new Date(snapshot.savedAt).toLocaleString()}
             </p>
           ) : null}

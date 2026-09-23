@@ -3,6 +3,13 @@ import { normalizeStoredKey } from "@/lib/keys";
 import type { DiffRow, HistoryEntry, Preset } from "@/lib/types";
 import { newId } from "@/lib/utils";
 
+export const HISTORY_LABEL_MAX = 80;
+
+/** Keep a history label as typed, including spaces, and cap its length. */
+export function historyLabel(value: string) {
+  return value.slice(0, HISTORY_LABEL_MAX);
+}
+
 function normalizedName(value: string) {
   return value.trim().toLowerCase();
 }
