@@ -240,7 +240,7 @@ Running stays inside the stain-blue family. Pause leaves it for slate-ochre. Don
 ### Destructive
 - **Alert Red**: Delete, invalid, and the top of the counter heat ramp. Not a timer state.
 
-Dark mode keeps the same roles on a navy canvas (`oklch(0.18 0.022 250)`) with a lifted primary (`oklch(0.72 0.09 230)`). Timer washes darken in place; they do not swap identity hues.
+Dark mode keeps the same roles on a navy canvas (`oklch(0.18 0.022 250)`) with a lifted primary (`oklch(0.72 0.09 230)`). Wash lines lift with it — border `oklch(0.48 0.028 250)`, input `oklch(0.55 0.032 250)` — so a 1px stroke still clears navy paper and control fills. Timer washes darken in place; they do not swap identity hues.
 
 **The Stain-Blue Rule.** Action lives on hue 236: primary, focus ring, running remainder. The page canvas is warm slide (hue 85). Ochre, teal, coffee, and red are state, support, or alert — never a second brand.
 

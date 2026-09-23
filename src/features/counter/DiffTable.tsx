@@ -140,6 +140,7 @@ export function DiffTable() {
                       <KeyCap
                         value={row.key}
                         name={row.cell || "cell"}
+                        tourRowId={row.id}
                         capturing={ctx.capture?.id === row.id}
                         error={ctx.keyErrorId === row.id}
                         onStart={() => ctx.startCapture(row.id)}
@@ -170,6 +171,8 @@ export function DiffTable() {
                           ctx.startCapture(row.id);
                         }}
                         aria-label={`Name for ${row.cell || "new cell"}`}
+                        data-howto="cell-name"
+                        data-howto-row={row.id}
                       />
                     </td>
                     <td className="p-1 text-center font-semibold tabular-nums">{row.count}</td>
@@ -220,6 +223,7 @@ export function DiffTable() {
                 <td colSpan={8} className="p-0.5">
                   <button
                     type="button"
+                    data-howto="add-cell"
                     onClick={addCell}
                     className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                   >

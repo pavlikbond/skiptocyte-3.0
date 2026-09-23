@@ -9,6 +9,7 @@ type KeyCapProps = {
   error: boolean;
   onStart: () => void;
   onCancel: () => void;
+  tourRowId?: string;
 };
 
 export function KeyCap({
@@ -18,6 +19,7 @@ export function KeyCap({
   error,
   onStart,
   onCancel,
+  tourRowId,
 }: KeyCapProps) {
   const ref = useRef<HTMLButtonElement | null>(null);
   const empty = value === "";
@@ -32,6 +34,8 @@ export function KeyCap({
       ref={ref}
       type="button"
       data-capture-zone
+      data-howto={tourRowId ? "keycap" : undefined}
+      data-howto-row={tourRowId}
       aria-pressed={capturing}
       aria-label={
         capturing

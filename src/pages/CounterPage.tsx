@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, MoreHorizontal } from "lucide-react";
+import { ChevronDown, CircleHelp, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DiffTable } from "@/features/counter/DiffTable";
+import { HowToTour } from "@/features/counter/HowToTour";
 import { KeyboardLayoutToggle, Keypad } from "@/features/counter/Keypad";
 import { MorphologyPanel } from "@/features/counter/MorphologyPanel";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -37,6 +38,10 @@ import { EstimateTable } from "@/features/estimate/EstimateTable";
 import { PrintDialog } from "@/features/pdf/PrintDialog";
 import { ImportExport } from "@/features/presets/ImportExport";
 import { SoundDialog } from "@/features/sounds/SoundDialog";
+
+function keepPresetDialogDuringTour(event: { preventDefault: () => void }) {
+  if (document.querySelector("[data-howto-card]")) event.preventDefault();
+}
 import { cn } from "@/lib/utils";
 
 type PendingApply = { id: string; name: string } | null;
@@ -50,16 +55,16 @@ function CounterScreen() {
   const ctx = useCounter();
   const [clearOpen, setClearOpen] = useState(false);
   const [presetManagerOpen, setPresetManagerOpen] = useState(false);
-  const [saveOpen, setSaveOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
-  const [presetStep, setPresetStep] = useState<"list" | "delete" | "export" | "import">("list");
+  const [presetStep, setPresetStep] = useState<"list" | "save" | "delete" | "export" | "import">("list");
   const [switchOpen, setSwitchOpen] = useState(false);
   const [saveName, setSaveName] = useState("My preset");
   const [renameName, setRenameName] = useState("");
   const [actionPresetId, setActionPresetId] = useState<string>("");
   const [pendingApply, setPendingApply] = useState<PendingApply>(null);
   const [historyPrompt, setHistoryPrompt] = useState(false);
+  const [tourRun, setTourRun] = useState(0);
   const [wbcText, setWbcText] = useState("");
   const holdRef = useRef<number | null>(null);
   const prompted = useRef(false);
@@ -85,8 +90,16 @@ function CounterScreen() {
   );
 
   useEffect(() => {
-    setWbcText(ctx.wbcCount > 0 ? String(ctx.wbcCount) : "");
+    setWbcText((current) => {
+      // "12." is 12, but keep the trailing dot so the next digit can still be typed.
+      if (current.endsWith(".") && Number(current) === ctx.wbcCount) return current;
+      return ctx.wbcCount > 0 ? String(ctx.wbcCount) : "";
+    });
   }, [ctx.wbcCount]);
+
+  useEffect(() => {
+    if (ctx.view !== "standard") setTourRun(0);
+  }, [ctx.view]);
 
   useEffect(() => {
     if (
@@ -155,6 +168,17 @@ function CounterScreen() {
               </TabsList>
             </Tabs>
             <div className="flex flex-wrap items-center gap-2">
+              {ctx.view === "standard" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-9 bg-[var(--timer-run-chip)] text-[var(--timer-run-ink)] hover:bg-[var(--timer-run-track)] hover:text-[var(--timer-run-ink)]"
+                  onClick={() => setTourRun((run) => run + 1)}
+                >
+                  <CircleHelp aria-hidden="true" />
+                  How to
+                </Button>
+              ) : null}
               <PrintDialog />
               <SoundDialog />
             </div>
@@ -167,6 +191,7 @@ function CounterScreen() {
                   <Button
                     className="h-9 min-w-44 justify-between"
                     variant="outline"
+                    data-howto="presets"
                     aria-label={`Choose setup. Current setup: ${sourceLabel}`}
                     onClick={() => setPresetManagerOpen(true)}
                   >
@@ -180,7 +205,7 @@ function CounterScreen() {
                       value={wbcText}
                       placeholder="WBC"
                       inputMode="decimal"
-                      className="h-auto w-28 rounded-none border-0 border-b-2 border-border bg-transparent px-0.5 py-0 pb-0.5 text-center text-sm leading-none tabular-nums shadow-none focus-visible:border-ring focus-visible:ring-0"
+                      className="h-auto w-28 rounded-none border-0 border-b-2 border-input bg-transparent px-0.5 py-0 pb-0.5 text-center text-sm leading-none tabular-nums shadow-none focus-visible:border-ring focus-visible:ring-0 dark:bg-transparent"
                       onChange={(e) => {
                         const v = e.target.value;
                         if (v === "") {
@@ -190,7 +215,8 @@ function CounterScreen() {
                         }
                         if (!/^\d{0,6}(\.\d{0,3})?$/.test(v)) return;
                         setWbcText(v);
-                        if (!v.endsWith(".")) ctx.setWbcCount(Number(v));
+                        const n = Number(v);
+                        if (Number.isFinite(n)) ctx.setWbcCount(n);
                       }}
                     />
                   </div>
@@ -238,6 +264,7 @@ function CounterScreen() {
               <Label htmlFor="count-limit">Count limit</Label>
               <Input
                 id="count-limit"
+                data-howto="count-limit"
                 value={ctx.preset.maxWBC}
                 onChange={(e) =>
                   ctx.setMaxWBC(parseInt(e.target.value.replace(/\D/g, ""), 10) || 1)
@@ -257,6 +284,7 @@ function CounterScreen() {
               <Button
                 variant={!ctx.increase ? "default" : "outline"}
                 className={countActionClass}
+                data-howto="minus"
                 onClick={() => ctx.setIncrease(false)}
               >
                 -
@@ -270,6 +298,10 @@ function CounterScreen() {
           </div>
         </Card>
       </div>
+
+      {tourRun > 0 && ctx.view === "standard" ? (
+        <HowToTour key={tourRun} onClose={() => setTourRun(0)} />
+      ) : null}
 
       <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
         <AlertDialogContent>
@@ -293,8 +325,45 @@ function CounterScreen() {
           if (!open) setPresetStep("list");
         }}
       >
-        <DialogContent className="w-[min(96vw,38rem)]">
-          {presetStep === "delete" ? (
+        <DialogContent
+          className="w-[min(96vw,38rem)]"
+          data-howto-preset=""
+          onPointerDownOutside={keepPresetDialogDuringTour}
+          onFocusOutside={keepPresetDialogDuringTour}
+          onInteractOutside={keepPresetDialogDuringTour}
+        >
+          {presetStep === "save" ? (
+            <div data-howto="save-dialog">
+              <DialogHeader>
+                <DialogTitle>Save current setup</DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  Counts are not stored in the preset.
+                </p>
+              </DialogHeader>
+              <div className="space-y-2 py-2">
+                <Label htmlFor="save-preset-name">Name</Label>
+                <Input
+                  id="save-preset-name"
+                  value={saveName}
+                  onChange={(e) => setSaveName(e.target.value)}
+                />
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setPresetStep("list")}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    void ctx.saveCurrentAsPreset(saveName);
+                    setPresetStep("list");
+                  }}
+                  disabled={ctx.saving}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : presetStep === "delete" ? (
             <>
               <DialogHeader>
                 <DialogTitle>Delete {actionPreset?.name ?? "preset"}?</DialogTitle>
@@ -335,10 +404,8 @@ function CounterScreen() {
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => {
-                      setPresetManagerOpen(false);
-                      setSaveOpen(true);
-                    }}
+                    data-howto="save-preset"
+                    onClick={() => setPresetStep("save")}
                     disabled={ctx.saving}
                   >
                     {ctx.setupSource.kind === "saved" ? "Save as new preset" : "Save as preset"}
@@ -380,6 +447,7 @@ function CounterScreen() {
                             <div className="flex shrink-0 items-center gap-1.5">
                               <Button
                                 size="sm"
+                                data-howto={selected ? undefined : "select-preset"}
                                 variant={selected ? "outline" : "default"}
                                 disabled={selected}
                                 onClick={() => requestApply({ id: preset.id, name: preset.name })}
@@ -440,33 +508,6 @@ function CounterScreen() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={saveOpen} onOpenChange={setSaveOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Save current setup</AlertDialogTitle>
-          </AlertDialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="save-preset-name">Name</Label>
-            <Input
-              id="save-preset-name"
-              value={saveName}
-              onChange={(e) => setSaveName(e.target.value)}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                void ctx.saveCurrentAsPreset(saveName);
-                setSaveOpen(false);
-              }}
-            >
-              Save
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <AlertDialog open={updateOpen} onOpenChange={setUpdateOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -520,7 +561,13 @@ function CounterScreen() {
       </AlertDialog>
 
       <AlertDialog open={switchOpen} onOpenChange={setSwitchOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent
+          data-howto-preset=""
+          data-howto="switch-dialog"
+          onPointerDownOutside={keepPresetDialogDuringTour}
+          onFocusOutside={keepPresetDialogDuringTour}
+          onInteractOutside={keepPresetDialogDuringTour}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Start a new count with {pendingApply?.name}?</AlertDialogTitle>
             <AlertDialogDescription>

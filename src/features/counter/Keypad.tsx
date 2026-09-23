@@ -73,6 +73,8 @@ function KeyButton({
     <button
       type="button"
       data-capture-zone
+      data-howto="pad-key"
+      data-key={keyValue}
       aria-label={
         captureTaken ? `${label}, ${bound}, swap` : bound ? `${label}, ${bound}` : label
       }
@@ -128,6 +130,7 @@ export function KeyboardLayoutToggle() {
   return (
     <TooltipProvider delayDuration={200}>
       <div
+        data-howto="layout"
         className="inline-flex h-9 shrink-0 items-center rounded-md border border-border p-0.5"
         role="group"
         aria-label="On-screen layout"
@@ -177,7 +180,7 @@ export function Keypad() {
     ctx.captureNotice ??
     (ctx.capture
       ? `Binding ${captureTarget}...`
-      : "Undo: Backspace or Ctrl+Z (when not typing in an input).");
+      : "Undo: Backspace or Ctrl+Z.");
 
   return (
     <div className="relative">
@@ -237,6 +240,7 @@ export function Keypad() {
       {layout === "numpad" ? (
         <div
           data-capture-zone
+          data-howto="pad"
           className={cn("numpad-grid", ctx.isHandset && "numpad-handset")}
         >
           {(ctx.isHandset ? NUMPAD.filter((k) => !k.hideHandset) : NUMPAD).map((k) => (
@@ -250,7 +254,7 @@ export function Keypad() {
           ))}
         </div>
       ) : (
-        <div data-capture-zone className="keyboard-board">
+        <div data-capture-zone data-howto="pad" className="keyboard-board">
           {KEYBOARD.map((row, i) => (
             <div key={i} className="keyboard-row" data-row={i}>
               {row.map((k) => (
