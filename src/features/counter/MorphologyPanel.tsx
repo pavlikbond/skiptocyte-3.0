@@ -1,14 +1,14 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useCounter } from "@/features/counter/CounterProvider";
+import { useCounterSession } from "@/features/counter/context/useCounterSession";
 import { GRADE_MORPH_ITEMS } from "@/lib/types";
 import type { MorphologyGrade } from "@/lib/types";
 
 const GRADES: MorphologyGrade[] = [0, 1, 2, 3];
 
 export function MorphologyPanel() {
-  const { morphology, setMorphology } = useCounter();
+  const { morphology, setMorphology } = useCounterSession();
   return (
     <Accordion type="single" collapsible className="mt-1">
       <AccordionItem value="morph">

@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -15,6 +13,23 @@ import {
   useSaveCloudSounds,
   useUserDoc,
 } from "@/features/presets/useUserDoc";
+import { CounterHistoryContext } from "@/features/counter/context/CounterHistoryContext";
+import { CounterPresetsContext } from "@/features/counter/context/CounterPresetsContext";
+import { CounterSessionContext } from "@/features/counter/context/CounterSessionContext";
+import { CounterSoundsContext } from "@/features/counter/context/CounterSoundsContext";
+import {
+  clonePresetForSession,
+  dedupePresetIds,
+  pulse,
+} from "@/features/counter/context/counterHelpers";
+import type {
+  CaptureTarget,
+  CounterContextValue,
+} from "@/features/counter/context/counterTypes";
+import { createCounterHistoryValue } from "@/features/counter/context/createCounterHistoryValue";
+import { createCounterPresetsValue } from "@/features/counter/context/createCounterPresetsValue";
+import { createCounterSessionValue } from "@/features/counter/context/createCounterSessionValue";
+import { createCounterSoundsValue } from "@/features/counter/context/createCounterSoundsValue";
 import {
   playChannel,
   preloadSounds,
@@ -38,6 +53,7 @@ import {
   tally,
   zeroEstimate,
 } from "@/lib/counting";
+import { applyUndo } from "@/features/counter/counterSession";
 import { normalizeKey } from "@/lib/keys";
 import { blankPreset } from "@/lib/presets";
 import {
@@ -48,28 +64,24 @@ import {
   loadHistory,
   loadKeyboardType,
   loadLocalPresets,
-  loadPrintSettings,
   loadSoundSettings,
   saveCurrentSetup,
   saveEstimateSettings,
   saveHistory,
   saveKeyboardType,
   saveLocalPresets,
-  savePrintSettings,
   saveSoundSettings,
   saveViewType,
   loadViewType,
 } from "@/lib/storage";
-import { presetFromHistory } from "@/lib/history";
+import { historyLabel, presetFromHistory } from "@/lib/history";
 import type {
-  DiffRow,
   EstimateCell,
   HistoryEntry,
   KeyboardType,
   Lineage,
   MorphologyState,
   Preset,
-  PrintSettings,
   SetupSource,
   SoundSettings,
   UndoAction,
@@ -81,116 +93,6 @@ import {
   HISTORY_CAP,
 } from "@/lib/types";
 import { isEditableTarget, newId } from "@/lib/utils";
-
-type KeyBindResult = { ok: boolean; swappedWith: string | null };
-type CaptureTarget = { id: string } | null;
-
-type CounterContextValue = {
-  ready: boolean;
-  saving: boolean;
-  presets: Preset[];
-  preset: Preset;
-  setupSource: SetupSource;
-  wbcCount: number;
-  increase: boolean;
-  view: ViewType;
-  keyboardType: KeyboardType;
-  isHandset: boolean;
-  stats: ReturnType<typeof rowStats>;
-  tallyValue: number;
-  corrected: number | null;
-  ancValue: number | null;
-  alcValue: number | null;
-  me: string | null;
-  flashRowId: string | null;
-  flashKey: string | null;
-  flashTick: number;
-  shake: boolean;
-  keyErrorId: string | null;
-  capture: CaptureTarget;
-  captureLabel: string | null;
-  captureNotice: string | null;
-  morphology: MorphologyState;
-  estimate: {
-    fieldCount: number;
-    fieldCountMax: number;
-    fieldCountKey: string;
-    cells: EstimateCell[];
-  };
-  print: PrintSettings;
-  history: HistoryEntry[];
-  soundSettings: SoundSettings;
-  setWbcCount: (n: number) => void;
-  setIncrease: (v: boolean) => void;
-  setView: (v: ViewType) => void;
-  setKeyboardType: (v: KeyboardType) => void;
-  applySavedPreset: (id: string, force?: boolean) => boolean;
-  saveCurrentAsPreset: (name: string) => Promise<void>;
-  updateSavedPreset: (id: string) => Promise<void>;
-  renameSavedPreset: (id: string, name: string) => Promise<void>;
-  deleteSavedPreset: (id: string) => Promise<void>;
-  setMaxWBC: (n: number) => void;
-  updateRow: (id: string, patch: Partial<DiffRow>) => void;
-  addRow: () => string;
-  removeRow: (id: string) => void;
-  reorderRows: (from: number, to: number) => void;
-  bindRowKey: (id: string, key: string) => KeyBindResult;
-  startCapture: (id: string) => void;
-  cancelCapture: () => void;
-  captureKey: (key: string | null) => boolean;
-  clearSession: () => void;
-  undo: () => void;
-  bumpRow: (id: string, delta: 1 | -1) => void;
-  setMorphology: (next: MorphologyState) => void;
-  setEstimateMeta: (patch: Partial<{ fieldCountMax: number; fieldCountKey: string }>) => void;
-  updateEstimateCell: (id: string, patch: Partial<EstimateCell>) => void;
-  addEstimateCell: () => string;
-  removeEstimateCell: (id: string) => void;
-  bindEstimateKey: (id: string | "field", key: string) => KeyBindResult;
-  bumpEstimateCell: (id: string, delta: 1 | -1) => void;
-  bumpField: (delta: 1 | -1) => void;
-  setPrint: (next: PrintSettings) => void;
-  persistPrint: () => void;
-  restorePrint: () => void;
-  saveCountToHistory: () => void;
-  loadHistoryEntry: (id: string, force?: boolean) => boolean;
-  deleteHistoryEntry: (id: string) => void;
-  clearHistory: () => void;
-  updateSounds: (next: SoundSettings) => void;
-  replacePresets: (next: Preset[]) => Promise<void>;
-  mergePresets: (incoming: Preset[]) => Promise<void>;
-};
-
-const CounterContext = createContext<CounterContextValue | null>(null);
-
-function pulse<T>(setter: (v: T | null) => void, value: T, ms = 180) {
-  setter(value);
-  window.setTimeout(() => setter(null), ms);
-}
-
-function clonePresetForSession(source: Preset): Preset {
-  return {
-    id: newId(),
-    name: source.name,
-    maxWBC: source.maxWBC,
-    rows: source.rows.map((row) => ({
-      ...row,
-      id: newId(),
-      count: 0,
-    })),
-  };
-}
-
-function dedupePresetIds(list: Preset[]): Preset[] {
-  const seen = new Set<string>();
-  return list.map((preset) => {
-    if (!preset.id || seen.has(preset.id)) {
-      return { ...preset, id: newId() };
-    }
-    seen.add(preset.id);
-    return preset;
-  });
-}
 
 export function CounterProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -221,10 +123,10 @@ export function CounterProvider({ children }: { children: ReactNode }) {
   const [fieldCountMax, setFieldCountMax] = useState(10);
   const [fieldCountKey, setFieldCountKey] = useState("1");
   const [estimateCells, setEstimateCells] = useState<EstimateCell[]>([]);
-  const [print, setPrint] = useState<PrintSettings>(loadPrintSettings);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyUid, setHistoryUid] = useState<string | null | undefined>(undefined);
   const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND);
+  const [runtimeActive, setRuntimeActive] = useState(false);
   const [cloudHydrated, setCloudHydrated] = useState(false);
   const captureNoticeTimerRef = useRef<number | null>(null);
   const suppressRepeatCodeRef = useRef<string | null>(null);
@@ -311,7 +213,6 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     setFieldCountMax(est.fieldCountMax);
     setFieldCountKey(est.fieldCountKey);
     setEstimateCells(est.countedCells);
-    setPrint(loadPrintSettings());
     setHistory(loadHistory(uid));
     setWbcCount(0);
     setIncrease(true);
@@ -742,8 +643,33 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     ],
   );
 
+  const applyUndoFromStack = useCallback(() => {
+    setUndoStack((stack) => {
+      const result = applyUndo({
+        rows: preset.rows,
+        maxWBC: preset.maxWBC,
+        estimateCells,
+        fieldCount,
+        fieldCountMax,
+        undoStack: stack,
+      });
+      if (!result.changed) return stack;
+      if (result.rows !== preset.rows) {
+        updatePreset((p) => ({ ...p, rows: result.rows }));
+      }
+      if (result.estimateCells !== estimateCells) {
+        setEstimateCells(result.estimateCells);
+      }
+      if (result.fieldCount !== fieldCount) {
+        setFieldCount(result.fieldCount);
+      }
+      return result.undoStack;
+    });
+  }, [estimateCells, fieldCount, fieldCountMax, preset.maxWBC, preset.rows, updatePreset]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (!runtimeActive) return;
       if (capture) {
         if (event.key === "Tab") {
           cancelCapture();
@@ -777,46 +703,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       if (isEditableTarget(event.target)) return;
       if (event.key === "Backspace" || (event.ctrlKey && event.key.toLowerCase() === "z")) {
         event.preventDefault();
-        setUndoStack((stack) => {
-          const last = stack.at(-1);
-          if (!last) return stack;
-          if (last.kind === "diff") {
-            const reverse: 1 | -1 = last.delta === 1 ? -1 : 1;
-            const result = applyDiffDelta(
-              preset.rows,
-              last.rowId,
-              reverse,
-              preset.maxWBC,
-            );
-            if (result.outcome === "ok") {
-              updatePreset((p) => ({ ...p, rows: result.rows }));
-            }
-          }
-          if (last.kind === "estimate-cell") {
-            setEstimateCells((cells) => {
-              const result = applyEstimateCellDelta(
-                cells,
-                last.cellId,
-                last.delta === 1 ? -1 : 1,
-                fieldCount,
-                fieldCountMax,
-                false,
-              );
-              return result.cells;
-            });
-          }
-          if (last.kind === "estimate-field") {
-            setFieldCount((n) => {
-              const result = applyFieldDelta(
-                n,
-                fieldCountMax,
-                last.delta === 1 ? -1 : 1,
-              );
-              return result.fieldCount;
-            });
-          }
-          return stack.slice(0, -1);
-        });
+        applyUndoFromStack();
         return;
       }
       const key = normalizeKey(event);
@@ -843,12 +730,9 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     cancelCapture,
     capture,
     captureKey,
-    fieldCount,
-    fieldCountMax,
     handleKey,
-    preset.maxWBC,
-    preset.rows,
-    updatePreset,
+    applyUndoFromStack,
+    runtimeActive,
   ]);
 
   useEffect(() => {
@@ -887,9 +771,8 @@ export function CounterProvider({ children }: { children: ReactNode }) {
   }, [updatePreset, view]);
 
   const undo = useCallback(() => {
-    const event = new KeyboardEvent("keydown", { key: "Backspace" });
-    window.dispatchEvent(event);
-  }, []);
+    applyUndoFromStack();
+  }, [applyUndoFromStack]);
 
   const loadHistoryEntry = useCallback(
     (id: string, force = false) => {
@@ -925,6 +808,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     const entry: HistoryEntry = {
       id: newId(),
       savedAt: Date.now(),
+      label: "",
       presetName: sourceLabel,
       tally: tally(preset.rows),
       maxWBC: preset.maxWBC,
@@ -951,6 +835,18 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, [authLoading, morphology, preset, setupSource, uid, wbcCount]);
+
+  const renameHistoryEntry = useCallback((id: string, label: string) => {
+    if (authLoading) return;
+    const nextLabel = historyLabel(label);
+    setHistory((list) => {
+      const next = list.map((entry) =>
+        entry.id === id ? { ...entry, label: nextLabel } : entry,
+      );
+      saveHistory(next, uid);
+      return next;
+    });
+  }, [authLoading, uid]);
 
   const stats = useMemo(
     () => rowStats(preset.rows, wbcCount),
@@ -989,7 +885,6 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       fieldCountKey,
       cells: estimateCells,
     },
-    print,
     history,
     soundSettings,
     setWbcCount,
@@ -1104,11 +999,9 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     bindEstimateKey,
     bumpEstimateCell,
     bumpField,
-    setPrint,
-    persistPrint: () => savePrintSettings(print),
-    restorePrint: () => setPrint(loadPrintSettings()),
     saveCountToHistory,
     loadHistoryEntry,
+    renameHistoryEntry,
     deleteHistoryEntry: (id) => {
       if (authLoading) return;
       setHistory((list) => {
@@ -1142,6 +1035,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       setPresets(list);
       await persistSavedPresets(list);
     },
+    setRuntimeActive,
   }), [
     ready,
     saveCloudPresets.isPending,
@@ -1167,7 +1061,6 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     fieldCountMax,
     fieldCountKey,
     estimateCells,
-    print,
     history,
     soundSettings,
     applySavedPreset,
@@ -1189,20 +1082,29 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     bumpField,
     saveCountToHistory,
     loadHistoryEntry,
+    renameHistoryEntry,
     authLoading,
     uid,
     saveCloudSounds,
     persistSavedPresets,
     persistCurrent,
+    setRuntimeActive,
   ]);
 
-  return (
-    <CounterContext.Provider value={value}>{children}</CounterContext.Provider>
-  );
-}
+  const sessionValue = useMemo(() => createCounterSessionValue(value), [value]);
+  const presetsValue = useMemo(() => createCounterPresetsValue(value), [value]);
+  const historyValue = useMemo(() => createCounterHistoryValue(value), [value]);
+  const soundsValue = useMemo(() => createCounterSoundsValue(value), [value]);
 
-export function useCounter() {
-  const ctx = useContext(CounterContext);
-  if (!ctx) throw new Error("useCounter must be used within CounterProvider");
-  return ctx;
+  return (
+    <CounterSessionContext.Provider value={sessionValue}>
+      <CounterPresetsContext.Provider value={presetsValue}>
+        <CounterHistoryContext.Provider value={historyValue}>
+          <CounterSoundsContext.Provider value={soundsValue}>
+            {children}
+          </CounterSoundsContext.Provider>
+        </CounterHistoryContext.Provider>
+      </CounterPresetsContext.Provider>
+    </CounterSessionContext.Provider>
+  );
 }

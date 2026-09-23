@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { useCounter } from "@/features/counter/CounterProvider";
+import { useCounterSession } from "@/features/counter/context/useCounterSession";
 import { KeyCap } from "@/features/counter/KeyCap";
 import { looksLikeNrbc } from "@/lib/counting";
 import type { Lineage } from "@/lib/types";
@@ -72,7 +72,7 @@ function SortableRow({
 }
 
 export function DiffTable() {
-  const ctx = useCounter();
+  const ctx = useCounterSession();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const nameRefs = useRef(new Map<string, HTMLInputElement>());
   const pendingFocusId = useRef<string | null>(null);

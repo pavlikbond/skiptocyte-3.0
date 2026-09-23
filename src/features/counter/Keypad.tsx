@@ -1,7 +1,7 @@
 import { Grid3x3, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useCounter } from "@/features/counter/CounterProvider";
+import { useCounterSession } from "@/features/counter/context/useCounterSession";
 import { NUMPAD_ENTER } from "@/lib/keys";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +50,7 @@ function KeyButton({
   className?: string;
   hideHandset?: boolean;
 }) {
-  const ctx = useCounter();
+  const ctx = useCounterSession();
   const bound =
     ctx.view === "estimate"
       ? keyValue === ctx.estimate.fieldCountKey
@@ -124,7 +124,7 @@ function KeyButton({
 }
 
 export function KeyboardLayoutToggle() {
-  const ctx = useCounter();
+  const ctx = useCounterSession();
   const layout = ctx.keyboardType === "keyboard" ? "keyboard" : "numpad";
 
   return (
@@ -173,7 +173,7 @@ export function KeyboardLayoutToggle() {
 }
 
 export function Keypad() {
-  const ctx = useCounter();
+  const ctx = useCounterSession();
   const layout = ctx.isHandset || ctx.keyboardType === "numpad" ? "numpad" : "keyboard";
   const captureTarget = ctx.captureLabel ?? "cell";
   const bindingHint =
@@ -192,7 +192,7 @@ export function Keypad() {
             className="fixed inset-0 z-50 cursor-pointer bg-black/50"
             onClick={ctx.cancelCapture}
           />
-          <div className="pointer-events-none fixed inset-0 z-[60] flex items-start justify-center px-4 pt-18 sm:px-6 sm:pt-22">
+          <div className="pointer-events-none fixed inset-0 z-60 flex items-start justify-center px-4 pt-18 sm:px-6 sm:pt-22">
           <div
             data-capture-zone
             className="pointer-events-auto w-full max-w-md rounded-xl border border-border bg-popover p-4 shadow-lg"
@@ -233,7 +233,7 @@ export function Keypad() {
           </div>
         </>
       ) : null}
-      <div className={cn(ctx.capture && "relative z-[55]")}>
+      <div className={cn(ctx.capture && "relative z-55")}>
       <div className="mb-2 min-h-4 text-xs text-muted-foreground" aria-live="polite">
         <span>{bindingHint}</span>
       </div>

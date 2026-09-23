@@ -97,6 +97,8 @@ export type MorphologyState = {
 export type HistoryEntry = {
   id: string;
   savedAt: number;
+  /** User note for this snapshot. Absent on counts saved before labels existed. */
+  label?: string;
   presetName: string;
   tally: number;
   maxWBC: number;

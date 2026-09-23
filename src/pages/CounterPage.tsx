@@ -33,7 +33,9 @@ import { HowToTour } from "@/features/counter/HowToTour";
 import { KeyboardLayoutToggle, Keypad } from "@/features/counter/Keypad";
 import { MorphologyPanel } from "@/features/counter/MorphologyPanel";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { useCounter } from "@/features/counter/CounterProvider";
+import { useCounterHistory } from "@/features/counter/context/useCounterHistory";
+import { useCounterPresets } from "@/features/counter/context/useCounterPresets";
+import { useCounterSession } from "@/features/counter/context/useCounterSession";
 import { EstimateTable } from "@/features/estimate/EstimateTable";
 import { PrintDialog } from "@/features/pdf/PrintDialog";
 import { ImportExport } from "@/features/presets/ImportExport";
@@ -52,7 +54,10 @@ export function CounterPage() {
 }
 
 function CounterScreen() {
-  const ctx = useCounter();
+  const session = useCounterSession();
+  const presetLibrary = useCounterPresets();
+  const history = useCounterHistory();
+  const setRuntimeActive = session.setRuntimeActive;
   const [clearOpen, setClearOpen] = useState(false);
   const [presetManagerOpen, setPresetManagerOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
@@ -70,53 +75,58 @@ function CounterScreen() {
   const prompted = useRef(false);
 
   const sourceLabel = useMemo(() => {
-    if (ctx.setupSource.kind === "custom") return "Unsaved setup";
-    return ctx.setupSource.name;
-  }, [ctx.setupSource]);
+    if (session.setupSource.kind === "custom") return "Unsaved setup";
+    return session.setupSource.name;
+  }, [session.setupSource]);
 
   const sourceDescription =
-    ctx.setupSource.kind === "saved"
+    session.setupSource.kind === "saved"
       ? "Selected preset"
-      : ctx.setupSource.kind === "history"
+      : session.setupSource.kind === "history"
         ? "Loaded from history · not a preset"
-      : ctx.setupSource.kind === "builtin"
+      : session.setupSource.kind === "builtin"
         ? "Starter preset"
         : "Not saved as a preset";
 
-  const actionPreset = ctx.presets.find((p) => p.id === actionPresetId) ?? null;
+  const actionPreset = presetLibrary.presets.find((p) => p.id === actionPresetId) ?? null;
   const countActionClass = cn(
     "min-w-0 flex-1",
-    ctx.isHandset ? "h-11 min-h-11" : "h-9 px-2",
+    session.isHandset ? "h-11 min-h-11" : "h-9 px-2",
   );
 
   useEffect(() => {
     setWbcText((current) => {
       // "12." is 12, but keep the trailing dot so the next digit can still be typed.
-      if (current.endsWith(".") && Number(current) === ctx.wbcCount) return current;
-      return ctx.wbcCount > 0 ? String(ctx.wbcCount) : "";
+      if (current.endsWith(".") && Number(current) === session.wbcCount) return current;
+      return session.wbcCount > 0 ? String(session.wbcCount) : "";
     });
-  }, [ctx.wbcCount]);
+  }, [session.wbcCount]);
 
   useEffect(() => {
-    if (ctx.view !== "standard") setTourRun(0);
-  }, [ctx.view]);
+    if (session.view !== "standard") setTourRun(0);
+  }, [session.view]);
 
   useEffect(() => {
     if (
-      ctx.view === "standard" &&
-      ctx.tallyValue >= ctx.preset.maxWBC &&
-      ctx.tallyValue > 0 &&
+      session.view === "standard" &&
+      session.tallyValue >= session.preset.maxWBC &&
+      session.tallyValue > 0 &&
       !prompted.current
     ) {
       prompted.current = true;
       setHistoryPrompt(true);
     }
-    if (ctx.tallyValue === 0) prompted.current = false;
-  }, [ctx.tallyValue, ctx.preset.maxWBC, ctx.view]);
+    if (session.tallyValue === 0) prompted.current = false;
+  }, [session.tallyValue, session.preset.maxWBC, session.view]);
+
+  useEffect(() => {
+    setRuntimeActive(true);
+    return () => setRuntimeActive(false);
+  }, [setRuntimeActive]);
 
   const startHold = () => {
     holdRef.current = window.setTimeout(() => {
-      ctx.clearSession();
+      session.clearSession();
       holdRef.current = null;
     }, 600);
   };
@@ -131,7 +141,7 @@ function CounterScreen() {
 
   const requestApply = (choice: Exclude<PendingApply, null>) => {
     setPresetManagerOpen(false);
-    const applied = ctx.applySavedPreset(choice.id);
+    const applied = presetLibrary.applySavedPreset(choice.id);
     if (applied) return;
     setPendingApply(choice);
     setSwitchOpen(true);
@@ -139,12 +149,12 @@ function CounterScreen() {
 
   const confirmApply = () => {
     if (!pendingApply) return;
-    ctx.applySavedPreset(pendingApply.id, true);
+    presetLibrary.applySavedPreset(pendingApply.id, true);
     setSwitchOpen(false);
     setPendingApply(null);
   };
 
-  if (!ctx.ready) {
+  if (!session.ready) {
     return (
       <div className="space-y-3">
         <Skeleton className="h-24" />
@@ -159,8 +169,8 @@ function CounterScreen() {
         <div className="min-w-[min(100%,36rem)] flex-2 space-y-3">
           <Card className="flex flex-wrap items-center justify-between gap-2">
             <Tabs
-              value={ctx.view}
-              onValueChange={(v) => ctx.setView(v as "standard" | "estimate")}
+              value={session.view}
+              onValueChange={(v) => session.setView(v as "standard" | "estimate")}
             >
               <TabsList className="h-9">
                 <TabsTrigger className="h-7" value="standard">Diff</TabsTrigger>
@@ -168,11 +178,11 @@ function CounterScreen() {
               </TabsList>
             </Tabs>
             <div className="flex flex-wrap items-center gap-2">
-              {ctx.view === "standard" ? (
+              {session.view === "standard" ? (
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-9 bg-[var(--timer-run-chip)] text-[var(--timer-run-ink)] hover:bg-[var(--timer-run-track)] hover:text-[var(--timer-run-ink)]"
+                  className="h-9 bg-(--timer-run-chip) text-(--timer-run-ink) hover:bg-(--timer-run-track) hover:text-(--timer-run-ink)"
                   onClick={() => setTourRun((run) => run + 1)}
                 >
                   <CircleHelp aria-hidden="true" />
@@ -185,7 +195,7 @@ function CounterScreen() {
           </Card>
 
           <Card>
-            {ctx.view === "standard" ? (
+            {session.view === "standard" ? (
               <>
                 <div className="-mx-3 -mt-3 mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-3 py-3 sm:-mx-4 sm:-mt-4 sm:px-4">
                   <Button
@@ -210,23 +220,23 @@ function CounterScreen() {
                         const v = e.target.value;
                         if (v === "") {
                           setWbcText("");
-                          ctx.setWbcCount(0);
+                          session.setWbcCount(0);
                           return;
                         }
                         if (!/^\d{0,6}(\.\d{0,3})?$/.test(v)) return;
                         setWbcText(v);
                         const n = Number(v);
-                        if (Number.isFinite(n)) ctx.setWbcCount(n);
+                        if (Number.isFinite(n)) session.setWbcCount(n);
                       }}
                     />
                   </div>
                 </div>
                 <DiffTable />
                 <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                  {ctx.corrected != null ? <span>Corrected WBC {ctx.corrected}</span> : null}
-                  {ctx.ancValue != null ? <span>ANC {ctx.ancValue}</span> : null}
-                  {ctx.alcValue != null ? <span>ALC {ctx.alcValue}</span> : null}
-                  {ctx.me ? <span>M:E {ctx.me}</span> : null}
+                  {session.corrected != null ? <span>Corrected WBC {session.corrected}</span> : null}
+                  {session.ancValue != null ? <span>ANC {session.ancValue}</span> : null}
+                  {session.alcValue != null ? <span>ALC {session.alcValue}</span> : null}
+                  {session.me ? <span>M:E {session.me}</span> : null}
                 </div>
                 <MorphologyPanel />
               </>
@@ -238,17 +248,17 @@ function CounterScreen() {
         <Card
           className={cn(
             "max-w-full self-start",
-            ctx.isHandset
+            session.isHandset
               ? "w-full"
-              : ctx.keyboardType === "keyboard"
+              : session.keyboardType === "keyboard"
                 ? "w-full min-w-[min(100%,36rem)] max-w-184 flex-1"
                 : "w-[min(100%,21rem)] shrink-0",
           )}
         >
-          <div className={cn("mb-3 text-center text-3xl font-bold tabular-nums", ctx.shake && "shake")}>
-            {ctx.view === "standard"
-              ? `${ctx.tallyValue} / ${ctx.preset.maxWBC}`
-              : `${ctx.estimate.fieldCount} / ${ctx.estimate.fieldCountMax}`}
+          <div className={cn("mb-3 text-center text-3xl font-bold tabular-nums", session.shake && "shake")}>
+            {session.view === "standard"
+              ? `${session.tallyValue} / ${session.preset.maxWBC}`
+              : `${session.estimate.fieldCount} / ${session.estimate.fieldCountMax}`}
           </div>
           <Button
             variant="outline"
@@ -259,47 +269,47 @@ function CounterScreen() {
           >
             Clear
           </Button>
-          {ctx.view === "standard" ? (
+          {session.view === "standard" ? (
             <div className="mb-3">
               <Label htmlFor="count-limit">Count limit</Label>
               <Input
                 id="count-limit"
                 data-howto="count-limit"
-                value={ctx.preset.maxWBC}
+                value={session.preset.maxWBC}
                 onChange={(e) =>
-                  ctx.setMaxWBC(parseInt(e.target.value.replace(/\D/g, ""), 10) || 1)
+                  session.setMaxWBC(parseInt(e.target.value.replace(/\D/g, ""), 10) || 1)
                 }
               />
             </div>
           ) : null}
-          <div className={cn(!ctx.isHandset && ctx.keyboardType === "numpad" && "counter-pad")}>
+          <div className={cn(!session.isHandset && session.keyboardType === "numpad" && "counter-pad")}>
             <div className="mb-3 flex items-center gap-2">
               <Button
-                variant={ctx.increase ? "default" : "outline"}
+                variant={session.increase ? "default" : "outline"}
                 className={countActionClass}
-                onClick={() => ctx.setIncrease(true)}
+                onClick={() => session.setIncrease(true)}
               >
                 +
               </Button>
               <Button
-                variant={!ctx.increase ? "default" : "outline"}
+                variant={!session.increase ? "default" : "outline"}
                 className={countActionClass}
                 data-howto="minus"
-                onClick={() => ctx.setIncrease(false)}
+                onClick={() => session.setIncrease(false)}
               >
                 -
               </Button>
-              <Button variant="outline" className={countActionClass} onClick={ctx.undo}>
+              <Button variant="outline" className={countActionClass} onClick={session.undo}>
                 Undo
               </Button>
-              {!ctx.isHandset ? <KeyboardLayoutToggle /> : null}
+              {!session.isHandset ? <KeyboardLayoutToggle /> : null}
             </div>
             <Keypad />
           </div>
         </Card>
       </div>
 
-      {tourRun > 0 && ctx.view === "standard" ? (
+      {tourRun > 0 && session.view === "standard" ? (
         <HowToTour key={tourRun} onClose={() => setTourRun(0)} />
       ) : null}
 
@@ -313,7 +323,7 @@ function CounterScreen() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={ctx.clearSession}>Clear</AlertDialogAction>
+            <AlertDialogAction onClick={session.clearSession}>Clear</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -354,10 +364,10 @@ function CounterScreen() {
                 </Button>
                 <Button
                   onClick={() => {
-                    void ctx.saveCurrentAsPreset(saveName);
+                    void presetLibrary.saveCurrentAsPreset(saveName);
                     setPresetStep("list");
                   }}
-                  disabled={ctx.saving}
+                  disabled={presetLibrary.saving}
                 >
                   Save
                 </Button>
@@ -376,7 +386,7 @@ function CounterScreen() {
                 <Button
                   variant="destructive"
                   onClick={() => {
-                    if (actionPreset) void ctx.deleteSavedPreset(actionPreset.id);
+                    if (actionPreset) void presetLibrary.deleteSavedPreset(actionPreset.id);
                     setPresetStep("list");
                   }}
                 >
@@ -406,16 +416,16 @@ function CounterScreen() {
                     size="sm"
                     data-howto="save-preset"
                     onClick={() => setPresetStep("save")}
-                    disabled={ctx.saving}
+                    disabled={presetLibrary.saving}
                   >
-                    {ctx.setupSource.kind === "saved" ? "Save as new preset" : "Save as preset"}
+                    {session.setupSource.kind === "saved" ? "Save as new preset" : "Save as preset"}
                   </Button>
                 </div>
 
                 <section className="space-y-2">
                   <h3 className="text-sm font-semibold">Presets</h3>
 
-                  {ctx.presets.length === 0 ? (
+                  {presetLibrary.presets.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border px-4 py-5">
                       <p className="text-sm font-medium">No presets yet</p>
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -424,9 +434,9 @@ function CounterScreen() {
                     </div>
                   ) : (
                     <div className="divide-y divide-border rounded-lg border border-border">
-                      {ctx.presets.map((preset) => {
+                      {presetLibrary.presets.map((preset) => {
                         const selected =
-                          ctx.setupSource.kind === "saved" && ctx.setupSource.id === preset.id;
+                          session.setupSource.kind === "saved" && session.setupSource.id === preset.id;
                         return (
                           <div
                             key={preset.id}
@@ -522,7 +532,7 @@ function CounterScreen() {
             <AlertDialogAction
               onClick={() => {
                 if (!actionPreset) return;
-                void ctx.updateSavedPreset(actionPreset.id);
+                void presetLibrary.updateSavedPreset(actionPreset.id);
                 setUpdateOpen(false);
               }}
             >
@@ -550,7 +560,7 @@ function CounterScreen() {
             <AlertDialogAction
               onClick={() => {
                 if (!actionPreset) return;
-                void ctx.renameSavedPreset(actionPreset.id, renameName);
+                void presetLibrary.renameSavedPreset(actionPreset.id, renameName);
                 setRenameOpen(false);
               }}
             >
@@ -585,7 +595,7 @@ function CounterScreen() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Skip</AlertDialogCancel>
-            <AlertDialogAction onClick={ctx.saveCountToHistory}>Save</AlertDialogAction>
+            <AlertDialogAction onClick={history.saveCountToHistory}>Save</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
