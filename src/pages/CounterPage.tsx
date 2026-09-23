@@ -561,13 +561,7 @@ function CounterScreen() {
       </AlertDialog>
 
       <AlertDialog open={switchOpen} onOpenChange={setSwitchOpen}>
-        <AlertDialogContent
-          data-howto-preset=""
-          data-howto="switch-dialog"
-          onPointerDownOutside={keepPresetDialogDuringTour}
-          onFocusOutside={keepPresetDialogDuringTour}
-          onInteractOutside={keepPresetDialogDuringTour}
-        >
+        <AlertDialogContent data-howto-preset="" data-howto="switch-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>Start a new count with {pendingApply?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
