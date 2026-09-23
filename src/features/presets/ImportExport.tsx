@@ -3,7 +3,7 @@ import { Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useCounter } from "@/features/counter/CounterProvider";
+import { useCounterPresets } from "@/features/counter/context/useCounterPresets";
 import { dbRowsToLive, liveToDb } from "@/lib/storage";
 import { buildPresetFile, parsePresetFile } from "@/lib/schemas";
 import type { Preset } from "@/lib/types";
@@ -128,7 +128,7 @@ export function ImportExport({
   onStepChange: (step: PresetExchangeStep) => void;
   children: ReactNode;
 }) {
-  const ctx = useCounter();
+  const ctx = useCounterPresets();
   const fileRef = useRef<HTMLInputElement>(null);
   const [exportIds, setExportIds] = useState<Set<string>>(new Set());
   const [importCandidates, setImportCandidates] = useState<Preset[] | null>(null);

@@ -13,10 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { useCounter } from "@/features/counter/CounterProvider";
+import { useCounterSession } from "@/features/counter/context/useCounterSession";
 import { reportRowsFromHistory } from "@/lib/history";
 import type { HistoryEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { usePrintSettings } from "@/features/pdf/usePrintSettings";
 
 const DIFF_TOGGLES = [
   ["showCell", "Cell"],
@@ -40,7 +41,8 @@ export function PrintDialog({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 } = {}) {
-  const ctx = useCounter();
+  const session = useCounterSession();
+  const { print: p, setPrint, persistPrint, restorePrint } = usePrintSettings();
   const { toast } = useToast();
   const isControlled = openProp !== undefined;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -51,9 +53,8 @@ export function PrintDialog({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(false);
   const skipRestore = useRef(false);
-  const p = ctx.print;
   const busy = working !== null;
-  const view = snapshot ? "standard" : ctx.view;
+  const view = snapshot ? "standard" : session.view;
   const toggles = view === "estimate" ? ESTIMATE_TOGGLES : DIFF_TOGGLES;
   const snapshotRows = useMemo(
     () => (snapshot ? reportRowsFromHistory(snapshot) : null),
@@ -84,9 +85,9 @@ export function PrintDialog({
             view === "estimate"
               ? await renderEstimateBlob({
                   print: p,
-                  fieldCount: ctx.estimate.fieldCount,
-                  fieldCountMax: ctx.estimate.fieldCountMax,
-                  cells: ctx.estimate.cells,
+                  fieldCount: session.estimate.fieldCount,
+                  fieldCountMax: session.estimate.fieldCountMax,
+                  cells: session.estimate.cells,
                 })
               : await renderDiffBlob(
                   snapshot && snapshotRows
@@ -103,14 +104,14 @@ export function PrintDialog({
                       }
                     : {
                         print: p,
-                        rows: ctx.preset.rows,
-                        stats: ctx.stats,
-                        wbcCount: ctx.wbcCount,
-                        corrected: ctx.corrected,
-                        ancValue: ctx.ancValue,
-                        alcValue: ctx.alcValue,
-                        me: ctx.me,
-                        morphology: ctx.morphology,
+                        rows: session.preset.rows,
+                        stats: session.stats,
+                        wbcCount: session.wbcCount,
+                        corrected: session.corrected,
+                        ancValue: session.ancValue,
+                        alcValue: session.alcValue,
+                        me: session.me,
+                        morphology: session.morphology,
                       },
                 );
           if (cancelled) return;
@@ -143,22 +144,22 @@ export function PrintDialog({
     p,
     snapshot,
     snapshotRows,
-    ctx.preset.rows,
-    ctx.stats,
-    ctx.wbcCount,
-    ctx.corrected,
-    ctx.ancValue,
-    ctx.alcValue,
-    ctx.me,
-    ctx.morphology,
-    ctx.estimate.fieldCount,
-    ctx.estimate.fieldCountMax,
-    ctx.estimate.cells,
+    session.preset.rows,
+    session.stats,
+    session.wbcCount,
+    session.corrected,
+    session.ancValue,
+    session.alcValue,
+    session.me,
+    session.morphology,
+    session.estimate.fieldCount,
+    session.estimate.fieldCountMax,
+    session.estimate.cells,
   ]);
 
   function handleOpenChange(next: boolean) {
     if (busy && !next) return;
-    if (!next && !skipRestore.current) ctx.restorePrint();
+    if (!next && !skipRestore.current) restorePrint();
     skipRestore.current = false;
     if (!isControlled) setUncontrolledOpen(next);
     onOpenChange?.(next);
@@ -167,7 +168,7 @@ export function PrintDialog({
   async function handleSave() {
     if (saving || busy) return;
     setSaving(true);
-    ctx.persistPrint();
+    persistPrint();
     await new Promise((resolve) => window.setTimeout(resolve, 500));
     setSaving(false);
     toast("Settings saved");
@@ -180,9 +181,9 @@ export function PrintDialog({
     if (view === "estimate") {
       return renderEstimateBlob({
         print: p,
-        fieldCount: ctx.estimate.fieldCount,
-        fieldCountMax: ctx.estimate.fieldCountMax,
-        cells: ctx.estimate.cells,
+        fieldCount: session.estimate.fieldCount,
+        fieldCountMax: session.estimate.fieldCountMax,
+        cells: session.estimate.cells,
       });
     }
     if (snapshot && snapshotRows) {
@@ -200,19 +201,19 @@ export function PrintDialog({
     }
     return renderDiffBlob({
       print: p,
-      rows: ctx.preset.rows,
-      stats: ctx.stats,
-      wbcCount: ctx.wbcCount,
-      corrected: ctx.corrected,
-      ancValue: ctx.ancValue,
-      alcValue: ctx.alcValue,
-      me: ctx.me,
-      morphology: ctx.morphology,
+      rows: session.preset.rows,
+      stats: session.stats,
+      wbcCount: session.wbcCount,
+      corrected: session.corrected,
+      ancValue: session.ancValue,
+      alcValue: session.alcValue,
+      me: session.me,
+      morphology: session.morphology,
     });
   }
 
   function finishReport() {
-    ctx.persistPrint();
+    persistPrint();
     skipRestore.current = true;
     setWorking(null);
     if (!isControlled) setUncontrolledOpen(false);
@@ -311,7 +312,7 @@ export function PrintDialog({
                 maxLength={30}
                 value={p.reportTitle}
                 disabled={busy}
-                onChange={(e) => ctx.setPrint({ ...p, reportTitle: e.target.value.slice(0, 30) })}
+                onChange={(e) => setPrint({ ...p, reportTitle: e.target.value.slice(0, 30) })}
               />
             </div>
             <div>
@@ -320,13 +321,13 @@ export function PrintDialog({
                 value={p.paperSize}
                 disabled={busy}
                 onValueChange={(value) =>
-                  ctx.setPrint({ ...p, paperSize: value as "Letter" | "A4" })
+                  setPrint({ ...p, paperSize: value as "Letter" | "A4" })
                 }
               >
                 <SelectTrigger className="mt-1 h-9 w-full cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="z-[100]">
+                <SelectContent className="z-100">
                   <SelectItem value="Letter">Letter</SelectItem>
                   <SelectItem value="A4">A4</SelectItem>
                 </SelectContent>
@@ -338,7 +339,7 @@ export function PrintDialog({
                 maxLength={15}
                 value={p.units}
                 disabled={busy}
-                onChange={(e) => ctx.setPrint({ ...p, units: e.target.value.slice(0, 15) })}
+                onChange={(e) => setPrint({ ...p, units: e.target.value.slice(0, 15) })}
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 Use ^ for a superscript, e.g. x10^9/L
@@ -350,7 +351,7 @@ export function PrintDialog({
                   <Checkbox
                     checked={p[key]}
                     disabled={busy}
-                    onCheckedChange={(v) => ctx.setPrint({ ...p, [key]: Boolean(v) })}
+                    onCheckedChange={(v) => setPrint({ ...p, [key]: Boolean(v) })}
                   />
                   {label}
                 </label>
@@ -367,7 +368,7 @@ export function PrintDialog({
                       const fields = p.fields.map((x, idx) =>
                         idx === i ? { ...x, name: e.target.value.slice(0, 30) } : x,
                       );
-                      ctx.setPrint({ ...p, fields });
+                      setPrint({ ...p, fields });
                     }}
                   />
                   <Input
@@ -379,7 +380,7 @@ export function PrintDialog({
                       const fields = p.fields.map((x, idx) =>
                         idx === i ? { ...x, value: e.target.value.slice(0, 40) } : x,
                       );
-                      ctx.setPrint({ ...p, fields });
+                      setPrint({ ...p, fields });
                     }}
                   />
                   <Button
@@ -387,7 +388,7 @@ export function PrintDialog({
                     size="sm"
                     disabled={busy}
                     onClick={() =>
-                      ctx.setPrint({ ...p, fields: p.fields.filter((_, idx) => idx !== i) })
+                      setPrint({ ...p, fields: p.fields.filter((_, idx) => idx !== i) })
                     }
                   >
                     ×
@@ -400,7 +401,7 @@ export function PrintDialog({
                   size="sm"
                   disabled={busy}
                   onClick={() =>
-                    ctx.setPrint({
+                    setPrint({
                       ...p,
                       fields: [...p.fields, { name: `Field ${p.fields.length + 1}`, value: "" }],
                     })

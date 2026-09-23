@@ -4,13 +4,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCounter } from "@/features/counter/CounterProvider";
+import { useCounterSession } from "@/features/counter/context/useCounterSession";
 import { KeyCap } from "@/features/counter/KeyCap";
 import { estimateValues } from "@/lib/counting";
 import { cn, formatMaybeDecimal } from "@/lib/utils";
 
 export function EstimateTable() {
-  const ctx = useCounter();
+  const ctx = useCounterSession();
   const { estimate } = ctx;
   const nameRefs = useRef(new Map<string, HTMLInputElement>());
   const pendingFocusId = useRef<string | null>(null);

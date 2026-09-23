@@ -10,16 +10,16 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useCounterSounds } from "@/features/counter/context/useCounterSounds";
 import { SoundWaveform } from "@/features/sounds/SoundWaveform";
 import { playTrackPreview, preloadSounds, resumeAudio } from "@/features/sounds/soundEngine";
-import { useCounter } from "@/features/counter/CounterProvider";
 import { TRACK_COUNT } from "@/lib/types";
 
 const trackControlClass =
   "h-11 w-12 flex-col gap-0.5 px-0 py-1 leading-none";
 
 export function SoundDialog() {
-  const { soundSettings, updateSounds } = useCounter();
+  const { soundSettings, updateSounds } = useCounterSounds();
   const [open, setOpen] = useState(false);
 
   const preview = (channel: "max" | "change", track: number) => {

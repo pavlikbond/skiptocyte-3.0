@@ -26,14 +26,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { useCounter } from "@/features/counter/CounterProvider";
+import { useCounterHistory } from "@/features/counter/context/useCounterHistory";
 import { PrintDialog } from "@/features/pdf/PrintDialog";
 import type { HistoryEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function HistorySidebar() {
   const { user, loading: authLoading } = useAuth();
-  const ctx = useCounter();
+  const ctx = useCounterHistory();
   const { isMobile, setOpenMobile } = useSidebar();
   const [pendingLoad, setPendingLoad] = useState<HistoryEntry | null>(null);
   const [printEntry, setPrintEntry] = useState<HistoryEntry | null>(null);

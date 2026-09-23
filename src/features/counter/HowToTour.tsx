@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { useCounter } from "@/features/counter/CounterProvider";
+import { useCounterPresets } from "@/features/counter/context/useCounterPresets";
+import { useCounterSession } from "@/features/counter/context/useCounterSession";
 import {
   HOW_TO_STEP_COUNT,
   STEP,
@@ -129,7 +130,8 @@ function focusableItems(card: HTMLElement, target: HTMLElement | null) {
 }
 
 export function HowToTour({ onClose }: { onClose: () => void }) {
-  const ctx = useCounter();
+  const session = useCounterSession();
+  const presets = useCounterPresets();
   const [step, setStep] = useState<HowToStep>(0);
   const [spot, setSpot] = useState<Spot | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -140,19 +142,19 @@ export function HowToTour({ onClose }: { onClose: () => void }) {
   const spotRef = useRef<Spot | null>(null);
   const onCloseRef = useRef(onClose);
 
-  if (startIds.current === null) startIds.current = ctx.preset.rows.map((row) => row.id);
+  if (startIds.current === null) startIds.current = session.preset.rows.map((row) => row.id);
   onCloseRef.current = onClose;
 
-  const hidden = Boolean(ctx.capture) || dialogOpen;
-  const rowId = tourRowId(startIds.current, ctx.preset.rows);
-  const row = ctx.preset.rows.find((item) => item.id === rowId) ?? null;
+  const hidden = Boolean(session.capture) || dialogOpen;
+  const rowId = tourRowId(startIds.current, session.preset.rows);
+  const row = session.preset.rows.find((item) => item.id === rowId) ?? null;
   const keyOnPad = padHasKey(row?.key ?? "");
   const anchor = howToAnchor({
     step,
     rowId,
     key: row?.key ?? "",
     keyOnPad,
-    isHandset: ctx.isHandset,
+    isHandset: session.isHandset,
     savePresetVisible: surface.includes("save-preset"),
     saveDialogVisible: surface.includes("save-dialog"),
     selectPresetVisible: surface.includes("select-preset"),
@@ -162,7 +164,7 @@ export function HowToTour({ onClose }: { onClose: () => void }) {
 
   const body =
     step === STEP.count
-      ? countStepBody(row?.cell ?? "", row?.key ?? "", keyOnPad, ctx.isHandset)
+      ? countStepBody(row?.cell ?? "", row?.key ?? "", keyOnPad, session.isHandset)
       : step === STEP.name && !rowId
         ? "Add a cell first. Then type its name."
         : step === STEP.key && !rowId
@@ -187,10 +189,10 @@ export function HowToTour({ onClose }: { onClose: () => void }) {
       selectBaseline.current = null;
       return;
     }
-    const result = selectStepShouldFinish(selectBaseline.current, ctx.setupSource);
+    const result = selectStepShouldFinish(selectBaseline.current, session.setupSource);
     selectBaseline.current = result.baseline;
     if (result.finish) onCloseRef.current();
-  }, [step, ctx.setupSource]);
+  }, [session.setupSource, step]);
 
   useEffect(() => {
     const open = new Set(surface.split(" ").filter(Boolean));
@@ -203,13 +205,13 @@ export function HowToTour({ onClose }: { onClose: () => void }) {
       return;
     }
     if (open.has("save-dialog")) {
-      if (presetsAtSaveForm.current === null) presetsAtSaveForm.current = ctx.presets.length;
+      if (presetsAtSaveForm.current === null) presetsAtSaveForm.current = presets.presets.length;
       return;
     }
     const named = presetsAtSaveForm.current;
     const listOpen = open.has("preset") || open.has("save-preset");
-    if (named !== null && ctx.presets.length > named && listOpen) setStep(STEP.select);
-  }, [step, surface, ctx.presets.length]);
+    if (named !== null && presets.presets.length > named && listOpen) setStep(STEP.select);
+  }, [presets.presets.length, step, surface]);
 
   useLayoutEffect(() => {
     const allowPreset = step >= STEP.presets;
@@ -245,7 +247,7 @@ export function HowToTour({ onClose }: { onClose: () => void }) {
         hole: missing ? { cx: window.innerWidth / 2, cy: window.innerHeight / 2, r: 0 } : hole,
         card: { w: width, h: height },
         viewport: { w: window.innerWidth, h: window.innerHeight },
-        handset: ctx.isHandset,
+        handset: session.isHandset,
       });
       const next: Spot = { ...hole, cardLeft: pos.left, cardTop: pos.top, cardWidth: width, missing };
       spotRef.current = next;
@@ -307,7 +309,7 @@ export function HowToTour({ onClose }: { onClose: () => void }) {
       window.removeEventListener("resize", follow);
       window.removeEventListener("scroll", follow, true);
     };
-  }, [selector, hidden, ctx.isHandset, ctx.preset.rows.length, body]);
+  }, [body, hidden, selector, session.isHandset, session.preset.rows.length]);
 
   useEffect(() => {
     if (hidden) return;
