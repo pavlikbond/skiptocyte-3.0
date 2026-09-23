@@ -492,6 +492,66 @@ test.describe("differential counter", () => {
     await expectTally(page, 3, 100);
   });
 
+  test("relative and absolute update as cells are added, removed, and the WBC changes", async ({
+    page,
+  }) => {
+    const wbc = page.getByLabel("Absolute count");
+    await wbc.fill("10");
+    await blurActive(page);
+
+    await page.keyboard.press("5");
+    await expectCount(page, "Neutrophil", 1);
+    await expectRelative(page, "Neutrophil", "100%");
+    await expectAbsolute(page, "Neutrophil", "10");
+    await expectRelative(page, "Lymphocyte", "0%");
+    await expectAbsolute(page, "Lymphocyte", "0");
+
+    await page.keyboard.press("5");
+    await page.keyboard.press("6");
+    await page.keyboard.press("6");
+    await expectCount(page, "Neutrophil", 2);
+    await expectCount(page, "Lymphocyte", 2);
+    await expectRelative(page, "Neutrophil", "50%");
+    await expectRelative(page, "Lymphocyte", "50%");
+    await expectAbsolute(page, "Neutrophil", "5");
+    await expectAbsolute(page, "Lymphocyte", "5");
+    await expectRelative(page, "Eosinophil", "0%");
+    await expectAbsolute(page, "Eosinophil", "0");
+
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await expectCount(page, "Lymphocyte", 1);
+    await expectRelative(page, "Neutrophil", "66.7%");
+    await expectRelative(page, "Lymphocyte", "33.3%");
+    await expectAbsolute(page, "Neutrophil", "6.667");
+    await expectAbsolute(page, "Lymphocyte", "3.333");
+
+    await modeButton(page, "-").click();
+    await page.keyboard.press("5");
+    await expectCount(page, "Neutrophil", 1);
+    await expectCount(page, "Lymphocyte", 1);
+    await expectRelative(page, "Neutrophil", "50%");
+    await expectRelative(page, "Lymphocyte", "50%");
+    await expectAbsolute(page, "Neutrophil", "5");
+    await expectAbsolute(page, "Lymphocyte", "5");
+
+    await wbc.fill("20");
+    await blurActive(page);
+    await expectRelative(page, "Neutrophil", "50%");
+    await expectRelative(page, "Lymphocyte", "50%");
+    await expectAbsolute(page, "Neutrophil", "10");
+    await expectAbsolute(page, "Lymphocyte", "10");
+    await expectAbsolute(page, "Eosinophil", "0");
+
+    await modeButton(page, "+").click();
+    await page.keyboard.press("5");
+    await expectCount(page, "Neutrophil", 2);
+    await expectRelative(page, "Neutrophil", "66.7%");
+    await expectRelative(page, "Lymphocyte", "33.3%");
+    await expectAbsolute(page, "Neutrophil", "13.333");
+    await expectAbsolute(page, "Lymphocyte", "6.667");
+    await expectTally(page, 3, 100);
+  });
+
   test("naming a cell nRBC ignores it and corrects the WBC", async ({ page }) => {
     await page.getByRole("button", { name: "Add Cell" }).click();
     const name = page.getByRole("textbox", { name: "Name for new cell" });
