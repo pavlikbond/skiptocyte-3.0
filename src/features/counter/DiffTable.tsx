@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useCounter } from "@/features/counter/CounterProvider";
+import { KeyCap } from "@/features/counter/KeyCap";
 import { looksLikeNrbc } from "@/lib/counting";
 import type { Lineage } from "@/lib/types";
 import { CELL_NAME_MAX } from "@/lib/types";
@@ -136,19 +137,13 @@ export function DiffTable() {
                       </div>
                     </td>
                     <td className="p-1 text-center">
-                      <Input
+                      <KeyCap
                         value={row.key}
-                        className={cn(
-                          "mx-auto h-8 w-16 text-center",
-                          ctx.keyErrorId === row.id && "border-destructive ring-2 ring-destructive",
-                        )}
-                        onKeyDown={(e) => {
-                          if (e.key === "Tab" || e.key === "Backspace") return;
-                          e.preventDefault();
-                          ctx.bindRowKey(row.id, e.key);
-                        }}
-                        onChange={() => undefined}
-                        aria-label={`Key for ${row.cell || "cell"}`}
+                        name={row.cell || "cell"}
+                        capturing={ctx.capture?.id === row.id}
+                        error={ctx.keyErrorId === row.id}
+                        onStart={() => ctx.startCapture(row.id)}
+                        onCancel={ctx.cancelCapture}
                       />
                     </td>
                     <td className="p-1">
@@ -168,6 +163,11 @@ export function DiffTable() {
                             nrbc: named ? true : row.nrbc && looksLikeNrbc(row.cell) ? false : row.nrbc,
                             ignore: named ? true : row.ignore,
                           });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter" || row.key) return;
+                          e.preventDefault();
+                          ctx.startCapture(row.id);
                         }}
                         aria-label={`Name for ${row.cell || "new cell"}`}
                       />

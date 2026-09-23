@@ -5,6 +5,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -22,6 +23,7 @@ import {
 import {
   alc,
   anc,
+  assignKey,
   anyCounts,
   applyDiffDelta,
   applyDiffKey,
@@ -29,7 +31,6 @@ import {
   applyFieldDelta,
   clearRowCounts,
   correctedWbc,
-  canAssignKey,
   meRatio,
   pushUndo,
   rowStats,
@@ -37,6 +38,7 @@ import {
   tally,
   zeroEstimate,
 } from "@/lib/counting";
+import { normalizeKey } from "@/lib/keys";
 import { blankPreset } from "@/lib/presets";
 import {
   defaultCurrentSetup,
@@ -80,6 +82,9 @@ import {
 } from "@/lib/types";
 import { isEditableTarget, newId } from "@/lib/utils";
 
+type KeyBindResult = { ok: boolean; swappedWith: string | null };
+type CaptureTarget = { id: string } | null;
+
 type CounterContextValue = {
   ready: boolean;
   saving: boolean;
@@ -102,6 +107,9 @@ type CounterContextValue = {
   flashTick: number;
   shake: boolean;
   keyErrorId: string | null;
+  capture: CaptureTarget;
+  captureLabel: string | null;
+  captureNotice: string | null;
   morphology: MorphologyState;
   estimate: {
     fieldCount: number;
@@ -126,7 +134,10 @@ type CounterContextValue = {
   addRow: () => string;
   removeRow: (id: string) => void;
   reorderRows: (from: number, to: number) => void;
-  bindRowKey: (id: string, key: string) => boolean;
+  bindRowKey: (id: string, key: string) => KeyBindResult;
+  startCapture: (id: string) => void;
+  cancelCapture: () => void;
+  captureKey: (key: string | null) => boolean;
   clearSession: () => void;
   undo: () => void;
   bumpRow: (id: string, delta: 1 | -1) => void;
@@ -135,7 +146,7 @@ type CounterContextValue = {
   updateEstimateCell: (id: string, patch: Partial<EstimateCell>) => void;
   addEstimateCell: () => string;
   removeEstimateCell: (id: string) => void;
-  bindEstimateKey: (id: string | "field", key: string) => boolean;
+  bindEstimateKey: (id: string | "field", key: string) => KeyBindResult;
   bumpEstimateCell: (id: string, delta: 1 | -1) => void;
   bumpField: (delta: 1 | -1) => void;
   setPrint: (next: PrintSettings) => void;
@@ -203,6 +214,8 @@ export function CounterProvider({ children }: { children: ReactNode }) {
   const [flashTick, setFlashTick] = useState(0);
   const [shake, setShake] = useState(false);
   const [keyErrorId, setKeyErrorId] = useState<string | null>(null);
+  const [capture, setCapture] = useState<CaptureTarget>(null);
+  const [captureNotice, setCaptureNotice] = useState<string | null>(null);
   const [morphology, setMorphology] = useState<MorphologyState>(EMPTY_MORPHOLOGY);
   const [fieldCount, setFieldCount] = useState(0);
   const [fieldCountMax, setFieldCountMax] = useState(10);
@@ -213,6 +226,8 @@ export function CounterProvider({ children }: { children: ReactNode }) {
   const [historyUid, setHistoryUid] = useState<string | null | undefined>(undefined);
   const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND);
   const [cloudHydrated, setCloudHydrated] = useState(false);
+  const captureNoticeTimerRef = useRef<number | null>(null);
+  const suppressRepeatCodeRef = useRef<string | null>(null);
 
   // Swap before paint so a logout cannot keep showing the previous account's counts.
   if (!authLoading && historyUid !== uid) {
@@ -246,6 +261,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       setPreset(next);
       setSetupSource(source);
       setUndoStack([]);
+      setCapture(null);
       setMorphology(EMPTY_MORPHOLOGY);
       persistCurrent(next, source);
       return true;
@@ -306,6 +322,8 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     setFlashKey(null);
     setShake(false);
     setKeyErrorId(null);
+    setCapture(null);
+    setCaptureNotice(null);
     setCloudHydrated(false);
     setReady(true);
     void preloadSounds();
@@ -318,6 +336,15 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (captureNoticeTimerRef.current != null) {
+        window.clearTimeout(captureNoticeTimerRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!uid || !userDoc.data || cloudHydrated) return;
@@ -388,6 +415,21 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     },
     [soundSettings],
   );
+
+  const showCaptureNotice = useCallback((message: string, ms: number) => {
+    setCaptureNotice(message);
+    if (captureNoticeTimerRef.current != null) {
+      window.clearTimeout(captureNoticeTimerRef.current);
+    }
+    captureNoticeTimerRef.current = window.setTimeout(() => {
+      setCaptureNotice(null);
+      captureNoticeTimerRef.current = null;
+    }, ms);
+  }, []);
+
+  const cancelCapture = useCallback(() => {
+    setCapture(null);
+  }, []);
 
   const updatePreset = useCallback(
     (updater: (current: Preset) => Preset, options?: { persistStructure?: boolean }) => {
@@ -554,8 +596,184 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     ],
   );
 
+  const bindRowKey = useCallback(
+    (id: string, key: string) => {
+      const result = assignKey(preset.rows, id, key);
+      if (result.items === preset.rows) return { ok: false, swappedWith: null };
+      updatePreset(
+        (p) => ({
+          ...p,
+          rows: result.items,
+        }),
+        { persistStructure: true },
+      );
+      return { ok: true, swappedWith: result.swappedWith?.id ?? null };
+    },
+    [preset.rows, updatePreset],
+  );
+
+  const bindEstimateKey = useCallback(
+    (id: string | "field", key: string) => {
+      if (id === "field") {
+        const currentKey = fieldCountKey;
+        if (currentKey === key) return { ok: true, swappedWith: null };
+        const swappedCell = key
+          ? estimateCells.find((cell) => cell.key && cell.key === key)
+          : undefined;
+        const nextFieldKey = key;
+        const nextCells = swappedCell
+          ? estimateCells.map((cell) =>
+              cell.id === swappedCell.id ? { ...cell, key: currentKey } : cell,
+            )
+          : estimateCells;
+        setFieldCountKey(nextFieldKey);
+        if (swappedCell) {
+          setEstimateCells(nextCells);
+        }
+        persistEstimate(nextCells, fieldCountMax, nextFieldKey);
+        return { ok: true, swappedWith: swappedCell?.id ?? null };
+      }
+      const current = estimateCells.find((cell) => cell.id === id);
+      if (!current) return { ok: false, swappedWith: null };
+      if (current.key === key) return { ok: true, swappedWith: null };
+
+      if (key === fieldCountKey) {
+        const nextCells = estimateCells.map((cell) =>
+          cell.id === id ? { ...cell, key } : cell,
+        );
+        const nextFieldKey = current.key;
+        setFieldCountKey(nextFieldKey);
+        setEstimateCells(nextCells);
+        persistEstimate(nextCells, fieldCountMax, nextFieldKey);
+        return { ok: true, swappedWith: "field" };
+      }
+
+      const result = assignKey(estimateCells, id, key);
+      setEstimateCells(result.items);
+      persistEstimate(result.items);
+      return { ok: true, swappedWith: result.swappedWith?.id ?? null };
+    },
+    [estimateCells, fieldCountKey, fieldCountMax, persistEstimate],
+  );
+
+  const captureLabel = useMemo(() => {
+    if (!capture) return null;
+    if (view === "estimate") {
+      if (capture.id === "field") return "field count";
+      return estimateCells.find((cell) => cell.id === capture.id)?.name || "cell";
+    }
+    return preset.rows.find((row) => row.id === capture.id)?.cell || "cell";
+  }, [capture, estimateCells, preset.rows, view]);
+
+  const startCapture = useCallback((id: string) => {
+    setCapture({ id });
+    setCaptureNotice(null);
+  }, []);
+
+  const captureKey = useCallback(
+    (key: string | null) => {
+      if (!capture) return false;
+      if (key == null) {
+        pulse(setKeyErrorId, capture.id, 350);
+        showCaptureNotice("That key can't be used here", 1600);
+        return false;
+      }
+
+      const targetId = capture.id;
+      if (view === "estimate") {
+        const currentKey =
+          targetId === "field"
+            ? fieldCountKey
+            : (estimateCells.find((cell) => cell.id === targetId)?.key ?? "");
+        if (currentKey === key) {
+          setCapture(null);
+          return false;
+        }
+        const bindResult = bindEstimateKey(targetId === "field" ? "field" : targetId, key);
+        if (!bindResult.ok) return false;
+
+        setCapture(null);
+        setFlashKey(key);
+        if (targetId !== "field") {
+          setFlashRowId(targetId);
+          setFlashTick((n) => n + 1);
+        }
+        if (bindResult.swappedWith) {
+          const swappedName =
+            bindResult.swappedWith === "field"
+              ? "field count"
+              : estimateCells.find((cell) => cell.id === bindResult.swappedWith)?.name || "cell";
+          showCaptureNotice(`Swapped with ${swappedName}`, 2000);
+        }
+        return true;
+      }
+
+      const row = preset.rows.find((item) => item.id === targetId);
+      if (!row) {
+        setCapture(null);
+        return false;
+      }
+      if (row.key === key) {
+        setCapture(null);
+        return false;
+      }
+      const bindResult = bindRowKey(targetId, key);
+      if (!bindResult.ok) return false;
+      setCapture(null);
+      setFlashKey(key);
+      setFlashRowId(targetId);
+      setFlashTick((n) => n + 1);
+      if (bindResult.swappedWith) {
+        const swappedName =
+          preset.rows.find((item) => item.id === bindResult.swappedWith)?.cell || "cell";
+        showCaptureNotice(`Swapped with ${swappedName}`, 2000);
+      }
+      return true;
+    },
+    [
+      bindEstimateKey,
+      bindRowKey,
+      capture,
+      estimateCells,
+      fieldCountKey,
+      preset.rows,
+      showCaptureNotice,
+      view,
+    ],
+  );
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (capture) {
+        if (event.key === "Tab") {
+          cancelCapture();
+          return;
+        }
+        event.preventDefault();
+        if (event.key === "Escape") {
+          cancelCapture();
+          return;
+        }
+        if (event.key === "Backspace" || event.key === "Delete") {
+          captureKey("");
+          return;
+        }
+        const handled = captureKey(normalizeKey(event));
+        if (handled) {
+          suppressRepeatCodeRef.current = event.code || event.key;
+        }
+        return;
+      }
+
+      if (
+        suppressRepeatCodeRef.current &&
+        (event.code === suppressRepeatCodeRef.current || event.key === suppressRepeatCodeRef.current) &&
+        event.repeat
+      ) {
+        event.preventDefault();
+        return;
+      }
+
       if (isEditableTarget(event.target)) return;
       if (event.key === "Backspace" || (event.ctrlKey && event.key.toLowerCase() === "z")) {
         event.preventDefault();
@@ -601,54 +819,61 @@ export function CounterProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
-      handleKey(event.key);
+      const key = normalizeKey(event);
+      if (!key) return;
+      handleKey(key);
     };
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (
+        suppressRepeatCodeRef.current &&
+        (event.code === suppressRepeatCodeRef.current || event.key === suppressRepeatCodeRef.current)
+      ) {
+        suppressRepeatCodeRef.current = null;
+      }
+    };
+
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [fieldCount, fieldCountMax, handleKey, preset.maxWBC, preset.rows, updatePreset]);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [
+    cancelCapture,
+    capture,
+    captureKey,
+    fieldCount,
+    fieldCountMax,
+    handleKey,
+    preset.maxWBC,
+    preset.rows,
+    updatePreset,
+  ]);
 
-  const bindRowKey = useCallback(
-    (id: string, key: string) => {
-      if (!canAssignKey(key, preset.rows, id)) {
-        pulse(setKeyErrorId, id, 1000);
-        return false;
-      }
-      updatePreset(
-        (p) => ({
-          ...p,
-          rows: p.rows.map((r) => (r.id === id ? { ...r, key } : r)),
-        }),
-        { persistStructure: true },
-      );
-      return true;
-    },
-    [preset.rows, updatePreset],
-  );
+  useEffect(() => {
+    if (!capture) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-capture-zone]")) return;
+      cancelCapture();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [cancelCapture, capture]);
 
-  const bindEstimateKey = useCallback(
-    (id: string | "field", key: string) => {
-      if (id === "field") {
-        if (!canAssignKey(key, estimateCells)) {
-          pulse(setKeyErrorId, "field", 1000);
-          return false;
-        }
-        setFieldCountKey(key);
-        persistEstimate(estimateCells, fieldCountMax, key);
-        return true;
-      }
-      if (!canAssignKey(key, estimateCells, id, [fieldCountKey])) {
-        pulse(setKeyErrorId, id, 1000);
-        return false;
-      }
-      setEstimateCells((cells) => {
-        const next = cells.map((c) => (c.id === id ? { ...c, key } : c));
-        persistEstimate(next);
-        return next;
-      });
-      return true;
-    },
-    [estimateCells, fieldCountKey, fieldCountMax, persistEstimate],
-  );
+  useEffect(() => {
+    if (!capture) return;
+    if (view === "estimate") {
+      if (capture.id === "field") return;
+      if (estimateCells.some((cell) => cell.id === capture.id)) return;
+      cancelCapture();
+      return;
+    }
+    if (preset.rows.some((row) => row.id === capture.id)) return;
+    cancelCapture();
+  }, [cancelCapture, capture, estimateCells, preset.rows, view]);
 
   const clearSession = useCallback(() => {
     if (view === "estimate") {
@@ -657,6 +882,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     } else {
       updatePreset((p) => ({ ...p, rows: clearRowCounts(p.rows) }));
     }
+    setCapture(null);
     setUndoStack([]);
   }, [updatePreset, view]);
 
@@ -683,6 +909,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       setUndoStack([]);
       setFlashRowId(null);
       setFlashKey(null);
+      setCapture(null);
       setViewState("standard");
       saveViewType("standard");
       persistCurrent(next, source);
@@ -752,6 +979,9 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     flashTick,
     shake,
     keyErrorId,
+    capture,
+    captureLabel,
+    captureNotice,
     morphology,
     estimate: {
       fieldCount,
@@ -765,6 +995,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     setWbcCount,
     setIncrease,
     setView: (v) => {
+      setCapture(null);
       setViewState(v);
       saveViewType(v);
     },
@@ -831,6 +1062,9 @@ export function CounterProvider({ children }: { children: ReactNode }) {
         { persistStructure: true },
       ),
     bindRowKey,
+    startCapture,
+    cancelCapture,
+    captureKey,
     clearSession,
     undo,
     bumpRow,
@@ -925,6 +1159,9 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     flashTick,
     shake,
     keyErrorId,
+    capture,
+    captureLabel,
+    captureNotice,
     morphology,
     fieldCount,
     fieldCountMax,
@@ -940,6 +1177,9 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     deleteSavedPreset,
     updatePreset,
     bindRowKey,
+    startCapture,
+    cancelCapture,
+    captureKey,
     clearSession,
     undo,
     bumpRow,

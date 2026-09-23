@@ -5,6 +5,7 @@ import {
   defaultCurrentSetup,
   liveToDb,
   loadCurrentSetup,
+  loadEstimateSettings,
   loadHistory,
   loadLocalPresets,
   saveCurrentSetup,
@@ -235,6 +236,21 @@ describe("Firestore preset serialization", () => {
   it("round-trips an intentionally empty Firestore preset list", () => {
     expect(liveToDb([])).toEqual([]);
   });
+
+  it("migrates legacy Enter to numpad Enter and drops dead keys", () => {
+    const restored = dbRowsToLive({
+      id: "legacy",
+      name: "Legacy keys",
+      maxWBC: 100,
+      rows: [
+        { key: "Enter", cell: "Neutrophil", ignore: false },
+        { key: "ArrowUp", cell: "Basophil", ignore: false },
+      ],
+    });
+
+    expect(restored.rows[0]?.key).toBe("NumpadEnter");
+    expect(restored.rows[1]?.key).toBe("");
+  });
 });
 
 describe("current setup persistence", () => {
@@ -250,5 +266,25 @@ describe("current setup persistence", () => {
     expect(restored?.preset.name).toBe("Working setup");
     expect(restored?.preset.rows[0]?.count).toBe(0);
     expect(restored?.source.kind).toBe("custom");
+  });
+});
+
+describe("estimate settings key migration", () => {
+  it("normalizes field and cell keys from storage", () => {
+    localStorage.setItem(
+      storageKeys.estimateSettings,
+      JSON.stringify({
+        fieldCountMax: 12,
+        fieldCountKey: "Enter",
+        countedCells: [
+          { id: "a", key: "ArrowUp", name: "platelet", factor: 15000, count: 0 },
+          { id: "b", key: "2", name: "wbc", factor: 15000, count: 0 },
+        ],
+      }),
+    );
+    const restored = loadEstimateSettings();
+    expect(restored.fieldCountKey).toBe("NumpadEnter");
+    expect(restored.countedCells[0]?.key).toBe("");
+    expect(restored.countedCells[1]?.key).toBe("2");
   });
 });

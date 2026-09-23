@@ -195,6 +195,38 @@ export function keysInUse(
   );
 }
 
+export function assignKey<T extends { id: string; key: string | number }>(
+  items: T[],
+  id: string,
+  key: string,
+): { items: T[]; swappedWith: T | null } {
+  const targetIndex = items.findIndex((item) => item.id === id);
+  if (targetIndex < 0) return { items, swappedWith: null };
+  const target = items[targetIndex];
+  const nextKey = String(key);
+  const currentKey = String(target.key ?? "");
+  if (currentKey === nextKey) return { items, swappedWith: null };
+
+  const swappedIndex =
+    nextKey === ""
+      ? -1
+      : items.findIndex(
+          (item, index) => index !== targetIndex && String(item.key ?? "") === nextKey,
+        );
+  const swappedWith = swappedIndex >= 0 ? items[swappedIndex] : null;
+
+  const nextItems = items.map((item, index) => {
+    if (index === targetIndex) {
+      return { ...item, key: nextKey } as T;
+    }
+    if (index === swappedIndex) {
+      return { ...item, key: currentKey } as T;
+    }
+    return item;
+  });
+  return { items: nextItems, swappedWith };
+}
+
 /** True when `key` is free to bind. Compare within one view only — standard and estimate share a keypad but not a key namespace. */
 export function canAssignKey(
   key: string,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   alc,
   anc,
+  assignKey,
   applyDiffKey,
   applyEstimateCellDelta,
   applyFieldDelta,
@@ -153,5 +154,40 @@ describe("key assignment", () => {
     const mixed = [{ id: "a", key: 2 }];
     expect(keysInUse(mixed).has("2")).toBe(true);
     expect(canAssignKey("2", mixed, "b")).toBe(false);
+  });
+});
+
+describe("assignKey", () => {
+  it("swaps keys when the new key is already taken", () => {
+    const rows = [
+      { id: "a", key: "1", name: "A" },
+      { id: "b", key: "2", name: "B" },
+    ];
+    const result = assignKey(rows, "a", "2");
+    expect(result.items).toEqual([
+      { id: "a", key: "2", name: "A" },
+      { id: "b", key: "1", name: "B" },
+    ]);
+    expect(result.swappedWith?.id).toBe("b");
+  });
+
+  it("clears to unbound and does not swap when setting empty key", () => {
+    const rows = [
+      { id: "a", key: "1" },
+      { id: "b", key: "2" },
+    ];
+    const result = assignKey(rows, "a", "");
+    expect(result.items).toEqual([
+      { id: "a", key: "" },
+      { id: "b", key: "2" },
+    ]);
+    expect(result.swappedWith).toBeNull();
+  });
+
+  it("keeps the array unchanged for a no-op bind", () => {
+    const rows = [{ id: "a", key: "1" }];
+    const result = assignKey(rows, "a", "1");
+    expect(result.items).toBe(rows);
+    expect(result.swappedWith).toBeNull();
   });
 });

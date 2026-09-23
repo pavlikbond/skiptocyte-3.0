@@ -1,4 +1,5 @@
 import { looksLikeNrbc } from "@/lib/counting";
+import { normalizeStoredKey } from "@/lib/keys";
 import {
   builtInPresets,
   defaultEstimateCells,
@@ -59,7 +60,7 @@ export function dbRowsToLive(preset: DbPreset): Preset {
       const nrbc = Boolean(row.nrbc) || looksLikeNrbc(cell);
       return {
         id: newId(),
-        key: String(row.key ?? ""),
+        key: normalizeStoredKey(row.key),
         cell,
         count: 0,
         ignore: Boolean(row.ignore) || nrbc,
@@ -231,10 +232,12 @@ export function loadEstimateSettings(): EstimateSettings {
   }
   return {
     fieldCountMax: stored.fieldCountMax || 10,
-    fieldCountKey: stored.fieldCountKey || '1',
+    fieldCountKey:
+      stored.fieldCountKey == null ? '1' : normalizeStoredKey(stored.fieldCountKey),
     countedCells: (stored.countedCells ?? defaultEstimateCells()).map((c) => ({
       ...c,
       id: c.id || newId(),
+      key: normalizeStoredKey(c.key),
       count: 0,
       factor: c.factor ?? 15000,
     })),

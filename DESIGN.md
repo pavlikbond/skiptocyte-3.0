@@ -327,6 +327,12 @@ Title fields on timer cards are borderless and transparent until focus, then a s
 - **Style (composer digits):** Transparent, 3.35rem tabular, 3.6rem wide. Focus: 0.5rem well in chip wash. Colon at 3rem / 500 / 55% opacity.
 - **Focus:** Ring, never a heavy border jump. Error uses destructive border and ring on chrome inputs.
 
+### Keycaps (counter binding)
+- **Bound:** 2rem-high paper keycap with md radius, Wash Line border, and a slightly heavier bottom edge so each key reads as a tactile cap rather than text input.
+- **Unbound:** Dashed edge with muted ink and `—` placeholder; same footprint as a bound key so table rhythm never shifts.
+- **Listening:** Recolors to run wash and run ink, takes the 3px focus ring, and swaps label text for three pulsing dots. Under reduced motion the dots stay static.
+- **Labels:** Use IBM Plex tabular labels; translate stored sentinels to human caps (`Enter` for numpad Enter, `Num` for NumLock).
+
 ### Navigation
 Sticky header, 90% wash plus backdrop blur, Wash Line bottom edge. Logo at 2rem plus “Skiptocyte: Laboratory Tools” from `sm` up. Links are md-radius, 0.875rem / 500; active is accent wash. Coffee link uses the coffee fill. Mobile: ghost icon opens a right sheet.
 

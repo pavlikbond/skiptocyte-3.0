@@ -1,4 +1,5 @@
 import type { RowStats } from "@/lib/counting";
+import { normalizeStoredKey } from "@/lib/keys";
 import type { DiffRow, HistoryEntry, Preset } from "@/lib/types";
 import { newId } from "@/lib/utils";
 
@@ -28,7 +29,7 @@ export function presetFromHistory(
         .find(
           (row) => normalizedName(row.cell) === normalizedName(savedRow.cell),
         );
-      const candidateKey = savedRow.key ?? matchingRow?.key ?? "";
+      const candidateKey = normalizeStoredKey(savedRow.key ?? matchingRow?.key ?? "");
       const key =
         candidateKey && !usedKeys.has(candidateKey) ? candidateKey : "";
       if (key) usedKeys.add(key);
@@ -52,7 +53,7 @@ export function reportRowsFromHistory(entry: HistoryEntry): {
 } {
   const rows: DiffRow[] = entry.rows.map((savedRow, index) => ({
     id: `${entry.id}:${index}`,
-    key: savedRow.key ?? "",
+    key: normalizeStoredKey(savedRow.key),
     cell: savedRow.cell,
     count: savedRow.count,
     ignore: savedRow.ignore,

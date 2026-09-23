@@ -109,6 +109,24 @@ describe("presetFromHistory", () => {
 
     expect(restored.rows[0]?.key).toBe("");
   });
+
+  it("normalizes legacy saved keys while restoring history rows", () => {
+    const restored = presetFromHistory(
+      historyEntry([
+        {
+          key: "Enter",
+          cell: "Neutrophil",
+          count: 8,
+          ignore: false,
+          nrbc: false,
+          relative: 80,
+          absolute: 6,
+        },
+      ]),
+      [],
+    );
+    expect(restored.rows[0]?.key).toBe("NumpadEnter");
+  });
 });
 
 describe("reportRowsFromHistory", () => {

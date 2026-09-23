@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCounter } from "@/features/counter/CounterProvider";
+import { KeyCap } from "@/features/counter/KeyCap";
 import { estimateValues } from "@/lib/counting";
 import { cn, formatMaybeDecimal } from "@/lib/utils";
 
@@ -42,16 +43,13 @@ export function EstimateTable() {
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="estimate-field-key">Field key</Label>
-          <Input
-            id="estimate-field-key"
-            className={cn("w-20", ctx.keyErrorId === "field" && "border-destructive")}
+          <KeyCap
             value={estimate.fieldCountKey}
-            onKeyDown={(e) => {
-              if (e.key === "Tab" || e.key === "Backspace") return;
-              e.preventDefault();
-              ctx.bindEstimateKey("field", e.key);
-            }}
-            onChange={() => undefined}
+            name="field count"
+            capturing={ctx.capture?.id === "field"}
+            error={ctx.keyErrorId === "field"}
+            onStart={() => ctx.startCapture("field")}
+            onCancel={ctx.cancelCapture}
           />
         </div>
       </div>
@@ -83,19 +81,13 @@ export function EstimateTable() {
               return (
                 <tr key={cell.id} className="border-b border-border/70">
                   <td className="p-1 text-center">
-                    <Input
-                      className={cn(
-                        "mx-auto h-8 w-16 text-center",
-                        ctx.keyErrorId === cell.id && "border-destructive",
-                      )}
+                    <KeyCap
                       value={cell.key}
-                      onKeyDown={(e) => {
-                        if (e.key === "Tab" || e.key === "Backspace") return;
-                        e.preventDefault();
-                        ctx.bindEstimateKey(cell.id, e.key);
-                      }}
-                      onChange={() => undefined}
-                      aria-label={`Key for ${cell.name || "cell"}`}
+                      name={cell.name || "cell"}
+                      capturing={ctx.capture?.id === cell.id}
+                      error={ctx.keyErrorId === cell.id}
+                      onStart={() => ctx.startCapture(cell.id)}
+                      onCancel={ctx.cancelCapture}
                     />
                   </td>
                   <td className="p-1">
