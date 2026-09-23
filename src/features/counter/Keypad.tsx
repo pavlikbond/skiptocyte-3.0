@@ -92,50 +92,60 @@ function KeyButton({
   );
 }
 
+export function KeyboardLayoutToggle() {
+  const ctx = useCounter();
+  const layout = ctx.keyboardType === "keyboard" ? "keyboard" : "numpad";
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div
+        className="inline-flex h-9 shrink-0 items-center rounded-md border border-border p-0.5"
+        role="group"
+        aria-label="On-screen layout"
+      >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Keypad"
+              aria-pressed={layout === "numpad"}
+              className={cn("size-8", layout === "numpad" && "bg-accent text-accent-foreground")}
+              onClick={() => ctx.setKeyboardType("numpad")}
+            >
+              <Grid3x3 />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Keypad</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Keyboard"
+              aria-pressed={layout === "keyboard"}
+              className={cn("size-8", layout === "keyboard" && "bg-accent text-accent-foreground")}
+              onClick={() => ctx.setKeyboardType("keyboard")}
+            >
+              <Keyboard />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Keyboard</TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
+  );
+}
+
 export function Keypad() {
   const ctx = useCounter();
   const layout = ctx.isHandset || ctx.keyboardType === "numpad" ? "numpad" : "keyboard";
 
   return (
     <div>
-      {!ctx.isHandset ? (
-        <TooltipProvider delayDuration={200}>
-          <div className="mb-2 inline-flex rounded-md border border-border p-0.5" role="group" aria-label="On-screen layout">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Keypad"
-                  aria-pressed={layout === "numpad"}
-                  className={cn(layout === "numpad" && "bg-accent text-accent-foreground")}
-                  onClick={() => ctx.setKeyboardType("numpad")}
-                >
-                  <Grid3x3 />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Keypad</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Keyboard"
-                  aria-pressed={layout === "keyboard"}
-                  className={cn(layout === "keyboard" && "bg-accent text-accent-foreground")}
-                  onClick={() => ctx.setKeyboardType("keyboard")}
-                >
-                  <Keyboard />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Keyboard</TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
-      ) : null}
       {layout === "numpad" ? (
         <div className={cn("numpad-grid", ctx.isHandset && "numpad-handset")}>
           {(ctx.isHandset ? NUMPAD.filter((k) => !k.hideHandset) : NUMPAD).map((k) => (

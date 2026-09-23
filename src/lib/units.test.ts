@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseUnits } from "./units";
+import { parseUnits, unitBody } from "./units";
 
 describe("parseUnits", () => {
   it("splits x10^9/L into base, exponent, and rest", () => {
@@ -35,5 +35,25 @@ describe("parseUnits", () => {
 
   it("keeps unmatched carets as plain text so /L is not swallowed", () => {
     expect(parseUnits("10^n/L")).toEqual({ kind: "plain", text: "10^n/L" });
+  });
+});
+
+describe("unitBody", () => {
+  it("treats x10^9/L as a times 10^9/L", () => {
+    expect(unitBody("x10^9/L")).toEqual({ times: true, text: "10^9/L" });
+  });
+
+  it("treats a stored 10^9/L the same way", () => {
+    expect(unitBody("10^9/L")).toEqual({ times: true, text: "10^9/L" });
+  });
+
+  it("does not double a times sign already in the string", () => {
+    expect(unitBody("×10^9/L")).toEqual({ times: true, text: "10^9/L" });
+    expect(unitBody("× 10^3/uL")).toEqual({ times: true, text: "10^3/uL" });
+  });
+
+  it("leaves ordinary units alone", () => {
+    expect(unitBody("g/dL")).toEqual({ times: false, text: "g/dL" });
+    expect(unitBody("10^n/L")).toEqual({ times: false, text: "10^n/L" });
   });
 });

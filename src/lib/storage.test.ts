@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   accountStorageKey,
+  dbRowsToLive,
+  defaultCurrentSetup,
+  liveToDb,
+  loadCurrentSetup,
   loadHistory,
   loadLocalPresets,
+  saveCurrentSetup,
   saveHistory,
   saveLocalPresets,
   storageKeys,
@@ -102,7 +107,36 @@ describe("identity-scoped history", () => {
     );
 
     expect(loadHistory().map((e) => e.id)).toEqual(["guest"]);
+    expect(loadHistory(null).map((e) => e.id)).toEqual(["guest"]);
     expect(loadHistory("alice").map((e) => e.id)).toEqual(["alice"]);
+
+    saveHistory(
+      [
+        {
+          id: "bob",
+          savedAt: 3,
+          presetName: "Bob",
+          tally: 50,
+          maxWBC: 100,
+          wbcCount: 0,
+          correctedWbc: null,
+          anc: null,
+          alc: null,
+          meRatio: null,
+          rows: [],
+          morphology: {
+            grades: {},
+            plateletEstimate: "",
+            giantPlatelets: false,
+          },
+        },
+      ],
+      "bob",
+    );
+
+    expect(loadHistory("alice").map((e) => e.id)).toEqual(["alice"]);
+    expect(loadHistory("bob").map((e) => e.id)).toEqual(["bob"]);
+    expect(loadHistory(null).map((e) => e.id)).toEqual(["guest"]);
   });
 
   it("caps saved history", () => {
@@ -142,5 +176,79 @@ describe("identity-scoped presets", () => {
 
     expect(loadLocalPresets()[0]?.name).toBe("Guest panel");
     expect(loadLocalPresets("alice")[0]?.name).toBe("Alice panel");
+  });
+
+  it("seeds built-in presets only when no saved library exists", () => {
+    expect(loadLocalPresets().map((preset) => preset.name)).toEqual([
+      "5 Part",
+      "Peripheral Blood",
+      "Body Fluid",
+      "Bone Marrow",
+    ]);
+  });
+
+  it("preserves an intentionally empty saved preset library", () => {
+    saveLocalPresets([]);
+    expect(loadLocalPresets()).toEqual([]);
+  });
+});
+
+describe("Firestore preset serialization", () => {
+  it("preserves stable preset IDs while stripping live counts", () => {
+    const preset = {
+      id: "stable-preset-id",
+      name: "Cloud panel",
+      maxWBC: 100,
+      rows: [
+        {
+          id: "live-row-id",
+          key: "5",
+          cell: "Neutrophil",
+          count: 42,
+          ignore: false,
+          nrbc: false,
+          lineage: "none" as const,
+        },
+      ],
+    };
+
+    const [stored] = liveToDb([preset]);
+    expect(stored.id).toBe("stable-preset-id");
+    expect(stored.rows[0]).not.toHaveProperty("count");
+    expect(stored.rows[0]).not.toHaveProperty("id");
+
+    const restored = dbRowsToLive(stored);
+    expect(restored.id).toBe("stable-preset-id");
+    expect(restored.rows[0]?.count).toBe(0);
+  });
+
+  it("upgrades legacy Firestore presets without IDs on the next write", () => {
+    const legacy = dbRowsToLive({
+      name: "Legacy cloud panel",
+      maxWBC: 100,
+      rows: [],
+    });
+    expect(legacy.id).toBeTruthy();
+    expect(liveToDb([legacy])[0]?.id).toBe(legacy.id);
+  });
+
+  it("round-trips an intentionally empty Firestore preset list", () => {
+    expect(liveToDb([])).toEqual([]);
+  });
+});
+
+describe("current setup persistence", () => {
+  it("stores and restores the working setup independently of saved presets", () => {
+    const fallback = defaultCurrentSetup();
+    const setup = {
+      ...fallback.preset,
+      name: "Working setup",
+      rows: [{ ...fallback.preset.rows[0], cell: "Neutrophil", count: 12 }],
+    };
+    saveCurrentSetup(setup, { kind: "custom" }, "alice");
+    const restored = loadCurrentSetup("alice");
+    expect(restored?.preset.name).toBe("Working setup");
+    expect(restored?.preset.rows[0]?.count).toBe(0);
+    expect(restored?.source.kind).toBe("custom");
   });
 });

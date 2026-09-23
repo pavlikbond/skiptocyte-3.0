@@ -1,4 +1,15 @@
-import { ClipboardList, History, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, ClipboardList, Download, History, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Sidebar,
   SidebarContent,
@@ -12,24 +23,35 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useCounter } from "@/features/counter/CounterProvider";
+import { PrintDialog } from "@/features/pdf/PrintDialog";
 import type { HistoryEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function HistorySidebar() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const ctx = useCounter();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const [pendingLoad, setPendingLoad] = useState<HistoryEntry | null>(null);
+  const [printEntry, setPrintEntry] = useState<HistoryEntry | null>(null);
+
+  const loadEntry = (entry: HistoryEntry) => {
+    if (!ctx.loadHistoryEntry(entry.id)) setPendingLoad(entry);
+  };
 
   return (
-    <Sidebar side="left" variant="sidebar" collapsible="icon">
+    <>
+      <Sidebar side="left" variant="sidebar" collapsible="icon">
       <SidebarHeader className="relative border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Save count"
               className="h-9 justify-center bg-sidebar-primary font-semibold text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground active:bg-sidebar-primary/90 active:text-sidebar-primary-foreground group-data-[collapsible=icon]:size-8!"
+              disabled={!ctx.ready}
               onClick={ctx.saveCountToHistory}
             >
               <Plus />
@@ -51,7 +73,11 @@ export function HistorySidebar() {
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-semibold">History</span>
                   <span className="truncate text-xs text-sidebar-foreground/70">
-                    {user ? "This device · not synced" : "This device · guest"}
+                    {authLoading
+                      ? "Loading…"
+                      : user
+                        ? "This device · your account"
+                        : "This device · guest"}
                   </span>
                 </div>
               </SidebarMenuButton>
@@ -79,6 +105,11 @@ export function HistorySidebar() {
                   <HistoryEntryItem
                     key={entry.id}
                     entry={entry}
+                    onLoad={() => loadEntry(entry)}
+                    onDownload={() => {
+                      if (isMobile) setOpenMobile(false);
+                      setPrintEntry(entry);
+                    }}
                     onDelete={() => ctx.deleteHistoryEntry(entry.id)}
                   />
                 ))}
@@ -93,6 +124,7 @@ export function HistorySidebar() {
             <SidebarMenuButton
               tooltip="Clear all"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              disabled={!ctx.ready}
               onClick={ctx.clearHistory}
             >
               <Trash2 />
@@ -101,15 +133,56 @@ export function HistorySidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-    </Sidebar>
+      </Sidebar>
+
+      <AlertDialog
+        open={pendingLoad != null}
+        onOpenChange={(open) => {
+          if (!open) setPendingLoad(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Load this saved count?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This replaces the active count with the {pendingLoad?.presetName} snapshot.
+              The snapshot loads as a temporary setup, not a preset.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingLoad) ctx.loadHistoryEntry(pendingLoad.id, true);
+                setPendingLoad(null);
+              }}
+            >
+              Load count
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <PrintDialog
+        snapshot={printEntry}
+        open={printEntry != null}
+        onOpenChange={(open) => {
+          if (!open) setPrintEntry(null);
+        }}
+      />
+    </>
   );
 }
 
 function HistoryEntryItem({
   entry,
+  onLoad,
+  onDownload,
   onDelete,
 }: {
   entry: HistoryEntry;
+  onLoad: () => void;
+  onDownload: () => void;
   onDelete: () => void;
 }) {
   const tallyLabel = `${entry.tally}/${entry.maxWBC}`;
@@ -120,38 +193,57 @@ function HistoryEntryItem({
       className={cn(
         "rounded-lg border border-sidebar-border bg-card text-card-foreground",
         "shadow-[0_1px_2px_oklch(0.32_0.04_250/0.06)]",
-        "transition-[border-color,box-shadow] hover:border-sidebar-ring/35",
-        "group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:shadow-none",
+        "transition-[border-color,box-shadow] duration-200 ease-out",
+        "hover:border-sidebar-ring/50",
+        "hover:shadow-[0_1px_2px_oklch(0.32_0.04_250/0.08),0_8px_24px_oklch(0.32_0.04_250/0.06)]",
+        "group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:shadow-none group-data-[collapsible=icon]:hover:shadow-none",
       )}
     >
       <SidebarMenuButton
-        className="h-auto items-start py-2 hover:bg-transparent active:bg-transparent group-data-[collapsible=icon]:items-center"
-        tooltip={`${entry.presetName} · ${tallyLabel}`}
+        className={cn(
+          "h-auto cursor-pointer items-start py-2 pr-12 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:pr-2",
+          "hover:bg-transparent hover:text-card-foreground",
+          "active:bg-transparent active:text-card-foreground",
+          "focus-visible:ring-[3px] focus-visible:ring-sidebar-ring/50",
+          "group-data-[collapsible=icon]:hover:bg-sidebar-accent group-data-[collapsible=icon]:hover:text-sidebar-accent-foreground",
+          "group-data-[collapsible=icon]:active:bg-sidebar-accent group-data-[collapsible=icon]:active:text-sidebar-accent-foreground",
+        )}
+        tooltip={`Load ${entry.presetName} · ${tallyLabel}`}
+        onClick={onLoad}
       >
         <ClipboardList />
         <div className="grid min-w-0 flex-1 text-left leading-tight">
           <span className="truncate font-medium">{entry.presetName}</span>
-          <span className="truncate text-xs text-sidebar-foreground/70">
+          <span className="truncate text-xs text-muted-foreground">
             {new Date(entry.savedAt).toLocaleString()}
           </span>
-          <span className="truncate text-xs font-medium tabular-nums text-sidebar-foreground/80">
+          <span className="truncate text-xs font-medium tabular-nums lining-nums">
             {tallyLabel}
             {ancLabel}
           </span>
         </div>
       </SidebarMenuButton>
       <SidebarMenuAction
+        aria-label={`Download PDF of ${entry.presetName} count`}
+        className="text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        onClick={onDownload}
+      >
+        <Download />
+      </SidebarMenuAction>
+      <SidebarMenuAction
         showOnHover
         aria-label={`Delete ${entry.presetName} count`}
+        className="right-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive peer-hover/menu-button:text-muted-foreground"
         onClick={onDelete}
       >
         <Trash2 />
       </SidebarMenuAction>
-      <details className="group-data-[collapsible=icon]:hidden mb-2 ml-8 mr-2 open:border-t open:border-sidebar-border open:pt-1.5">
-        <summary className="cursor-pointer rounded-sm text-xs font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring/50 focus-visible:outline-none">
+      <details className="group/details mb-2 ml-8 mr-2 group-data-[collapsible=icon]:hidden open:border-t open:border-sidebar-border open:pt-1.5">
+        <summary className="flex cursor-pointer list-none items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground hover:text-card-foreground focus-visible:ring-[3px] focus-visible:ring-sidebar-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+          <ChevronRight className="size-3 shrink-0 transition-transform duration-200 group-open/details:rotate-90" />
           Details
         </summary>
-        <ul className="mt-1 space-y-0.5 text-xs tabular-nums text-sidebar-foreground/80">
+        <ul className="mt-1 space-y-0.5 text-xs tabular-nums lining-nums text-card-foreground/80">
           {entry.rows.map((r) => (
             <li key={r.cell}>
               {r.cell}: {r.count}

@@ -1,5 +1,5 @@
-import { Loader2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Download, Loader2, Printer } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { useCounter } from "@/features/counter/CounterProvider";
+import { reportRowsFromHistory } from "@/lib/history";
+import type { HistoryEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const DIFF_TOGGLES = [
@@ -29,19 +31,34 @@ const DIFF_TOGGLES = [
 
 const ESTIMATE_TOGGLES = [["showUnits", "Units"]] as const;
 
-export function PrintDialog() {
+export function PrintDialog({
+  snapshot = null,
+  open: openProp,
+  onOpenChange,
+}: {
+  snapshot?: HistoryEntry | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
   const ctx = useCounter();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = isControlled ? openProp : uncontrolledOpen;
   const [saving, setSaving] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  const [working, setWorking] = useState<"download" | "print" | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(false);
   const skipRestore = useRef(false);
   const p = ctx.print;
-  const busy = downloading;
-  const toggles = ctx.view === "estimate" ? ESTIMATE_TOGGLES : DIFF_TOGGLES;
+  const busy = working !== null;
+  const view = snapshot ? "standard" : ctx.view;
+  const toggles = view === "estimate" ? ESTIMATE_TOGGLES : DIFF_TOGGLES;
+  const snapshotRows = useMemo(
+    () => (snapshot ? reportRowsFromHistory(snapshot) : null),
+    [snapshot],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -64,24 +81,38 @@ export function PrintDialog() {
             "@/features/pdf/reports"
           );
           const blob =
-            ctx.view === "estimate"
+            view === "estimate"
               ? await renderEstimateBlob({
                   print: p,
                   fieldCount: ctx.estimate.fieldCount,
                   fieldCountMax: ctx.estimate.fieldCountMax,
                   cells: ctx.estimate.cells,
                 })
-              : await renderDiffBlob({
-                  print: p,
-                  rows: ctx.preset.rows,
-                  stats: ctx.stats,
-                  wbcCount: ctx.wbcCount,
-                  corrected: ctx.corrected,
-                  ancValue: ctx.ancValue,
-                  alcValue: ctx.alcValue,
-                  me: ctx.me,
-                  morphology: ctx.morphology,
-                });
+              : await renderDiffBlob(
+                  snapshot && snapshotRows
+                    ? {
+                        print: p,
+                        rows: snapshotRows.rows,
+                        stats: snapshotRows.stats,
+                        wbcCount: snapshot.wbcCount,
+                        corrected: snapshot.correctedWbc,
+                        ancValue: snapshot.anc,
+                        alcValue: snapshot.alc,
+                        me: snapshot.meRatio,
+                        morphology: snapshot.morphology,
+                      }
+                    : {
+                        print: p,
+                        rows: ctx.preset.rows,
+                        stats: ctx.stats,
+                        wbcCount: ctx.wbcCount,
+                        corrected: ctx.corrected,
+                        ancValue: ctx.ancValue,
+                        alcValue: ctx.alcValue,
+                        me: ctx.me,
+                        morphology: ctx.morphology,
+                      },
+                );
           if (cancelled) return;
           const url = URL.createObjectURL(blob);
           setPreviewUrl((prev) => {
@@ -108,8 +139,10 @@ export function PrintDialog() {
     };
   }, [
     open,
-    ctx.view,
+    view,
     p,
+    snapshot,
+    snapshotRows,
     ctx.preset.rows,
     ctx.stats,
     ctx.wbcCount,
@@ -127,7 +160,8 @@ export function PrintDialog() {
     if (busy && !next) return;
     if (!next && !skipRestore.current) ctx.restorePrint();
     skipRestore.current = false;
-    setOpen(next);
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
   }
 
   async function handleSave() {
@@ -139,49 +173,105 @@ export function PrintDialog() {
     toast("Settings saved");
   }
 
+  async function renderReportBlob() {
+    const { renderDiffBlob, renderEstimateBlob } = await import(
+      "@/features/pdf/reports"
+    );
+    if (view === "estimate") {
+      return renderEstimateBlob({
+        print: p,
+        fieldCount: ctx.estimate.fieldCount,
+        fieldCountMax: ctx.estimate.fieldCountMax,
+        cells: ctx.estimate.cells,
+      });
+    }
+    if (snapshot && snapshotRows) {
+      return renderDiffBlob({
+        print: p,
+        rows: snapshotRows.rows,
+        stats: snapshotRows.stats,
+        wbcCount: snapshot.wbcCount,
+        corrected: snapshot.correctedWbc,
+        ancValue: snapshot.anc,
+        alcValue: snapshot.alc,
+        me: snapshot.meRatio,
+        morphology: snapshot.morphology,
+      });
+    }
+    return renderDiffBlob({
+      print: p,
+      rows: ctx.preset.rows,
+      stats: ctx.stats,
+      wbcCount: ctx.wbcCount,
+      corrected: ctx.corrected,
+      ancValue: ctx.ancValue,
+      alcValue: ctx.alcValue,
+      me: ctx.me,
+      morphology: ctx.morphology,
+    });
+  }
+
+  function finishReport() {
+    ctx.persistPrint();
+    skipRestore.current = true;
+    setWorking(null);
+    if (!isControlled) setUncontrolledOpen(false);
+    onOpenChange?.(false);
+  }
+
   async function handleDownload() {
     if (busy || saving) return;
-    setDownloading(true);
+    setWorking("download");
     try {
-      const { downloadDiffPdf, downloadEstimatePdf } = await import(
-        "@/features/pdf/reports"
-      );
-      if (ctx.view === "estimate") {
-        await downloadEstimatePdf({
-          print: p,
-          fieldCount: ctx.estimate.fieldCount,
-          fieldCountMax: ctx.estimate.fieldCountMax,
-          cells: ctx.estimate.cells,
-        });
-      } else {
-        await downloadDiffPdf({
-          print: p,
-          rows: ctx.preset.rows,
-          stats: ctx.stats,
-          wbcCount: ctx.wbcCount,
-          corrected: ctx.corrected,
-          ancValue: ctx.ancValue,
-          alcValue: ctx.alcValue,
-          me: ctx.me,
-          morphology: ctx.morphology,
-        });
-      }
-      ctx.persistPrint();
-      skipRestore.current = true;
-      setDownloading(false);
-      setOpen(false);
+      const blob = await renderReportBlob();
+      const filename = `${p.reportTitle || "Report"}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      finishReport();
       toast("Report downloaded");
     } catch {
-      setDownloading(false);
+      setWorking(null);
+      toast("Could not generate the PDF. Try again.", "error");
+    }
+  }
+
+  async function handlePrint() {
+    if (busy || saving) return;
+    const tab = window.open("about:blank", "_blank");
+    if (!tab) {
+      toast("Allow pop-ups to open the report for printing.", "error");
+      return;
+    }
+    setWorking("print");
+    try {
+      const blob = await renderReportBlob();
+      const url = URL.createObjectURL(blob);
+      tab.location.href = url;
+      try {
+        tab.opener = null;
+      } catch {
+        // The PDF tab can detach as soon as it navigates to the blob.
+      }
+      finishReport();
+      toast("Report opened for printing");
+    } catch {
+      tab.close();
+      setWorking(null);
       toast("Could not generate the PDF. Try again.", "error");
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="h-9">Download PDF</Button>
-      </DialogTrigger>
+      {isControlled ? null : (
+        <DialogTrigger asChild>
+          <Button variant="outline" className="h-9">Download PDF</Button>
+        </DialogTrigger>
+      )}
       <DialogContent
         className="flex max-h-[calc(100dvh-2rem)] min-h-0 w-[min(96vw,56rem)] flex-col overflow-hidden"
         hideClose={busy}
@@ -201,6 +291,11 @@ export function PrintDialog() {
         ) : null}
         <DialogHeader className="shrink-0">
           <DialogTitle>Print report</DialogTitle>
+          {snapshot ? (
+            <p className="text-sm text-muted-foreground">
+              {snapshot.presetName} · {new Date(snapshot.savedAt).toLocaleString()}
+            </p>
+          ) : null}
         </DialogHeader>
         <div
           className={cn(
@@ -334,12 +429,23 @@ export function PrintDialog() {
                 )}
               </Button>
               <Button
+                variant="outline"
+                disabled={busy || saving}
+                onClick={() => {
+                  void handlePrint();
+                }}
+              >
+                <Printer aria-hidden="true" />
+                Print
+              </Button>
+              <Button
                 disabled={busy || saving}
                 onClick={() => {
                   void handleDownload();
                 }}
               >
-                Download {p.reportTitle}.pdf
+                <Download aria-hidden="true" />
+                Download
               </Button>
             </div>
           </div>

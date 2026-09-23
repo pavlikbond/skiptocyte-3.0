@@ -121,9 +121,11 @@ function NavItems({
 }
 
 export function AppShell() {
+  const { user, loading: authLoading } = useAuth();
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const isCounter = location.pathname === "/differential";
+  const historyKey = authLoading ? "auth-pending" : (user?.uid ?? "guest");
 
   useEffect(() => {
     void logPageView(location.pathname + location.search);
@@ -173,7 +175,7 @@ export function AppShell() {
         </SheetContent>
       </Sheet>
       <div className="relative flex min-h-0 min-w-0 flex-1">
-        {isCounter ? <HistorySidebar /> : null}
+        {isCounter ? <HistorySidebar key={historyKey} /> : null}
         {isCounter ? (
           <div className="hidden w-9 shrink-0 justify-center pt-2 md:peer-data-[state=collapsed]:flex">
             <SidebarTrigger className="border bg-background shadow-sm" />

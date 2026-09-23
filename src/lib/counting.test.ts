@@ -5,7 +5,9 @@ import {
   applyDiffKey,
   applyEstimateCellDelta,
   applyFieldDelta,
+  canAssignKey,
   correctedWbc,
+  keysInUse,
   meRatio,
   rowStats,
   tally,
@@ -119,5 +121,37 @@ describe("estimate", () => {
     expect(r2.outcome).toBe("blocked");
     const r3 = applyFieldDelta(0, 10, -1);
     expect(r3.outcome).toBe("blocked");
+  });
+});
+
+describe("key assignment", () => {
+  const rows = [
+    { id: "eos", key: "" },
+    { id: "neut", key: "5" },
+  ];
+  const estimate = [{ id: "plt", key: "2" }];
+
+  it("lets a diff row take 1 or 2 even if estimate uses those keys", () => {
+    expect(canAssignKey("1", rows, "eos", [])).toBe(true);
+    expect(canAssignKey("2", rows, "eos")).toBe(true);
+    expect(keysInUse(rows, "eos").has("1")).toBe(false);
+    expect(keysInUse(rows, "eos").has("2")).toBe(false);
+  });
+
+  it("still rejects a key already used by another row in the same view", () => {
+    expect(canAssignKey("5", rows, "eos")).toBe(false);
+    expect(canAssignKey("2", estimate, "new-cell", ["1"])).toBe(false);
+    expect(canAssignKey("1", estimate, "plt", ["1"])).toBe(false);
+  });
+
+  it("allows rebinding the same key on the same row", () => {
+    expect(canAssignKey("5", rows, "neut")).toBe(true);
+    expect(canAssignKey("2", estimate, "plt", ["1"])).toBe(true);
+  });
+
+  it("treats numeric stored keys as the same as string keys", () => {
+    const mixed = [{ id: "a", key: 2 }];
+    expect(keysInUse(mixed).has("2")).toBe(true);
+    expect(canAssignKey("2", mixed, "b")).toBe(false);
   });
 });

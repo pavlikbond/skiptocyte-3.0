@@ -1,6 +1,5 @@
 import { looksLikeNrbc } from "@/lib/counting";
 import {
-  blankPreset,
   builtInPresets,
   defaultEstimateCells,
 } from '@/lib/presets';
@@ -11,6 +10,7 @@ import type {
   KeyboardType,
   Preset,
   PrintSettings,
+  SetupSource,
   SoundSettings,
   ViewType,
 } from '@/lib/types';
@@ -19,6 +19,7 @@ import { newId } from '@/lib/utils';
 
 const KEYS = {
   presets: 'presets',
+  currentSetup: 'currentSetup',
   presetList: 'presetList',
   tableSettings: 'tableSettings',
   printSettings: 'printSettings',
@@ -50,7 +51,7 @@ function writeJson(key: string, value: unknown) {
 
 export function dbRowsToLive(preset: DbPreset): Preset {
   return {
-    id: newId(),
+    id: preset.id ?? newId(),
     name: preset.name,
     maxWBC: preset.maxWBC,
     rows: preset.rows.map((row) => {
@@ -71,6 +72,7 @@ export function dbRowsToLive(preset: DbPreset): Preset {
 
 export function liveToDb(presets: Preset[]): DbPreset[] {
   return presets.map((p) => ({
+    id: p.id,
     name: p.name,
     maxWBC: p.maxWBC,
     rows: p.rows.map((r) => ({
@@ -87,6 +89,17 @@ type LegacyPreset = {
   name: string;
   maxWBC: number;
   keyCells: [string | number, string, boolean][];
+};
+
+type StoredSetupSource =
+  | { kind: 'builtin'; name: string }
+  | { kind: 'saved'; id?: string; name: string }
+  | { kind: 'history'; name: string }
+  | { kind: 'custom'; name?: string };
+
+type StoredCurrentSetup = {
+  preset: DbPreset;
+  source: StoredSetupSource;
 };
 
 export function migratePresetList(): Preset[] | null {
@@ -110,7 +123,7 @@ export function migratePresetList(): Preset[] | null {
 
 export function loadStoredPresets(uid?: string | null): Preset[] | null {
   const stored = readJson<DbPreset[]>(accountStorageKey(KEYS.presets, uid));
-  if (stored && Array.isArray(stored) && stored.length > 0) {
+  if (stored && Array.isArray(stored)) {
     return stored.map(dbRowsToLive);
   }
   if (!uid) {
@@ -126,6 +139,47 @@ export function loadLocalPresets(uid?: string | null): Preset[] {
 
 export function saveLocalPresets(presets: Preset[], uid?: string | null) {
   writeJson(accountStorageKey(KEYS.presets, uid), liveToDb(presets));
+}
+
+function normalizeSource(source: StoredSetupSource): SetupSource {
+  if (source.kind === 'saved' && source.id) {
+    return { kind: 'saved', id: source.id, name: source.name };
+  }
+  if (source.kind === 'builtin') return source;
+  if (source.kind === 'history') return source;
+  if (source.kind === 'saved') return { kind: 'custom', name: source.name };
+  return source;
+}
+
+export function loadCurrentSetup(
+  uid?: string | null,
+): { preset: Preset; source: SetupSource } | null {
+  const stored = readJson<StoredCurrentSetup>(accountStorageKey(KEYS.currentSetup, uid));
+  if (!stored || typeof stored !== 'object' || !stored.preset) return null;
+  return {
+    preset: dbRowsToLive(stored.preset),
+    source: normalizeSource(stored.source ?? { kind: 'custom' }),
+  };
+}
+
+export function saveCurrentSetup(
+  preset: Preset,
+  source: SetupSource,
+  uid?: string | null,
+) {
+  const payload: StoredCurrentSetup = {
+    preset: liveToDb([preset])[0],
+    source,
+  };
+  writeJson(accountStorageKey(KEYS.currentSetup, uid), payload);
+}
+
+export function defaultCurrentSetup() {
+  const builtIn = builtInPresets()[0];
+  return {
+    preset: builtIn,
+    source: { kind: 'builtin', name: builtIn.name } satisfies SetupSource,
+  };
 }
 
 export function loadSoundSettings(uid?: string | null): SoundSettings {
@@ -224,11 +278,6 @@ export function saveHistory(entries: HistoryEntry[], uid?: string | null) {
     accountStorageKey(KEYS.countHistory, uid),
     entries.slice(0, HISTORY_CAP),
   );
-}
-
-export function ensurePresets(list: Preset[]): Preset[] {
-  if (list.length > 0) return list;
-  return [blankPreset('Default', 100)];
 }
 
 export { KEYS as storageKeys };

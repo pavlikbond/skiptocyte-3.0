@@ -26,10 +26,17 @@ export type DbRow = {
 };
 
 export type DbPreset = {
+  id?: string;
   name: string;
   maxWBC: number;
   rows: DbRow[];
 };
+
+export type SetupSource =
+  | { kind: "builtin"; name: string }
+  | { kind: "saved"; id: string; name: string }
+  | { kind: "history"; name: string }
+  | { kind: "custom"; name?: string };
 
 export type SoundChannel = {
   play: boolean;
@@ -99,10 +106,12 @@ export type HistoryEntry = {
   alc: number | null;
   meRatio: string | null;
   rows: {
+    key?: string;
     cell: string;
     count: number;
     ignore: boolean;
     nrbc: boolean;
+    lineage?: Lineage;
     relative: number;
     absolute: number;
   }[];

@@ -22,31 +22,33 @@ import {
 import {
   alc,
   anc,
+  anyCounts,
   applyDiffDelta,
   applyDiffKey,
   applyEstimateCellDelta,
   applyFieldDelta,
   clearRowCounts,
   correctedWbc,
-  keysInUse,
+  canAssignKey,
   meRatio,
   pushUndo,
   rowStats,
+  stripCountsForSave,
   tally,
   zeroEstimate,
 } from "@/lib/counting";
 import { blankPreset } from "@/lib/presets";
-import { dbRowsToLive } from "@/lib/storage";
 import {
-  ensurePresets,
+  defaultCurrentSetup,
+  dbRowsToLive,
+  loadCurrentSetup,
   loadEstimateSettings,
   loadHistory,
   loadKeyboardType,
   loadLocalPresets,
   loadPrintSettings,
   loadSoundSettings,
-  loadStoredPresets,
-  loadViewType,
+  saveCurrentSetup,
   saveEstimateSettings,
   saveHistory,
   saveKeyboardType,
@@ -54,7 +56,9 @@ import {
   savePrintSettings,
   saveSoundSettings,
   saveViewType,
+  loadViewType,
 } from "@/lib/storage";
+import { presetFromHistory } from "@/lib/history";
 import type {
   DiffRow,
   EstimateCell,
@@ -64,6 +68,7 @@ import type {
   MorphologyState,
   Preset,
   PrintSettings,
+  SetupSource,
   SoundSettings,
   UndoAction,
   ViewType,
@@ -79,8 +84,8 @@ type CounterContextValue = {
   ready: boolean;
   saving: boolean;
   presets: Preset[];
-  selectedId: string;
   preset: Preset;
+  setupSource: SetupSource;
   wbcCount: number;
   increase: boolean;
   view: ViewType;
@@ -111,11 +116,11 @@ type CounterContextValue = {
   setIncrease: (v: boolean) => void;
   setView: (v: ViewType) => void;
   setKeyboardType: (v: KeyboardType) => void;
-  selectPreset: (id: string) => void;
-  saveNow: () => Promise<void>;
-  createPreset: (name: string, maxWBC: number) => void;
-  deletePreset: () => void;
-  renamePreset: (name: string) => void;
+  applySavedPreset: (id: string, force?: boolean) => boolean;
+  saveCurrentAsPreset: (name: string) => Promise<void>;
+  updateSavedPreset: (id: string) => Promise<void>;
+  renameSavedPreset: (id: string, name: string) => Promise<void>;
+  deleteSavedPreset: (id: string) => Promise<void>;
   setMaxWBC: (n: number) => void;
   updateRow: (id: string, patch: Partial<DiffRow>) => void;
   addRow: () => string;
@@ -137,11 +142,12 @@ type CounterContextValue = {
   persistPrint: () => void;
   restorePrint: () => void;
   saveCountToHistory: () => void;
+  loadHistoryEntry: (id: string, force?: boolean) => boolean;
   deleteHistoryEntry: (id: string) => void;
   clearHistory: () => void;
   updateSounds: (next: SoundSettings) => void;
-  replacePresets: (next: Preset[], persist?: boolean) => void;
-  mergePresets: (incoming: Preset[]) => void;
+  replacePresets: (next: Preset[]) => Promise<void>;
+  mergePresets: (incoming: Preset[]) => Promise<void>;
 };
 
 const CounterContext = createContext<CounterContextValue | null>(null);
@@ -151,8 +157,32 @@ function pulse<T>(setter: (v: T | null) => void, value: T, ms = 180) {
   window.setTimeout(() => setter(null), ms);
 }
 
+function clonePresetForSession(source: Preset): Preset {
+  return {
+    id: newId(),
+    name: source.name,
+    maxWBC: source.maxWBC,
+    rows: source.rows.map((row) => ({
+      ...row,
+      id: newId(),
+      count: 0,
+    })),
+  };
+}
+
+function dedupePresetIds(list: Preset[]): Preset[] {
+  const seen = new Set<string>();
+  return list.map((preset) => {
+    if (!preset.id || seen.has(preset.id)) {
+      return { ...preset, id: newId() };
+    }
+    seen.add(preset.id);
+    return preset;
+  });
+}
+
 export function CounterProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const uid = user?.uid ?? null;
   const userDoc = useUserDoc();
   const saveCloudPresets = useSaveCloudPresets();
@@ -160,7 +190,8 @@ export function CounterProvider({ children }: { children: ReactNode }) {
 
   const [ready, setReady] = useState(false);
   const [presets, setPresets] = useState<Preset[]>([]);
-  const [selectedId, setSelectedId] = useState("");
+  const [preset, setPreset] = useState<Preset>(blankPreset());
+  const [setupSource, setSetupSource] = useState<SetupSource>({ kind: "custom" });
   const [wbcCount, setWbcCount] = useState(0);
   const [increase, setIncrease] = useState(true);
   const [view, setViewState] = useState<ViewType>("standard");
@@ -179,15 +210,84 @@ export function CounterProvider({ children }: { children: ReactNode }) {
   const [estimateCells, setEstimateCells] = useState<EstimateCell[]>([]);
   const [print, setPrint] = useState<PrintSettings>(loadPrintSettings);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyUid, setHistoryUid] = useState<string | null | undefined>(undefined);
   const [soundSettings, setSoundSettings] = useState<SoundSettings>(DEFAULT_SOUND);
   const [cloudHydrated, setCloudHydrated] = useState(false);
 
-  const preset = presets.find((p) => p.id === selectedId) ?? presets[0];
+  // Swap before paint so a logout cannot keep showing the previous account's counts.
+  if (!authLoading && historyUid !== uid) {
+    setHistoryUid(uid);
+    setHistory(loadHistory(uid));
+  }
+
+  const persistSavedPresets = useCallback(
+    async (next: Preset[], includeEmail = false) => {
+      const deduped = dedupePresetIds(next);
+      if (uid) {
+        await saveCloudPresets.mutateAsync({ presets: deduped, includeEmail });
+      } else {
+        saveLocalPresets(deduped);
+      }
+    },
+    [saveCloudPresets, uid],
+  );
+
+  const persistCurrent = useCallback(
+    (nextPreset: Preset, nextSource: SetupSource) => {
+      saveCurrentSetup(stripCountsForSave(nextPreset), nextSource, uid);
+    },
+    [uid],
+  );
+
+  const adoptTemplate = useCallback(
+    (template: Preset, source: SetupSource, force = false) => {
+      if (!force && anyCounts(preset.rows)) return false;
+      const next = clonePresetForSession(template);
+      setPreset(next);
+      setSetupSource(source);
+      setUndoStack([]);
+      setMorphology(EMPTY_MORPHOLOGY);
+      persistCurrent(next, source);
+      return true;
+    },
+    [persistCurrent, preset.rows],
+  );
 
   useLayoutEffect(() => {
-    const local = ensurePresets(loadLocalPresets(uid));
-    setPresets(local);
-    setSelectedId(local[0].id);
+    if (authLoading) {
+      setReady(false);
+      return;
+    }
+
+    const saved = dedupePresetIds(loadLocalPresets(uid));
+    setPresets(saved);
+
+    const storedSetup = loadCurrentSetup(uid);
+    if (storedSetup) {
+      const matchedSource =
+        storedSetup.source.kind === "builtin"
+          ? saved.find((item) => item.name === storedSetup.source.name)
+          : null;
+      const source: SetupSource = matchedSource
+        ? { kind: "saved", id: matchedSource.id, name: matchedSource.name }
+        : storedSetup.source;
+      setPreset(storedSetup.preset);
+      setSetupSource(source);
+      if (matchedSource) persistCurrent(storedSetup.preset, source);
+    } else if (saved[0]) {
+      const next = clonePresetForSession(saved[0]);
+      const source: SetupSource = { kind: "saved", id: saved[0].id, name: saved[0].name };
+      setPreset(next);
+      setSetupSource(source);
+      persistCurrent(next, source);
+    } else {
+      const fallback = defaultCurrentSetup();
+      const next = clonePresetForSession(fallback.preset);
+      setPreset(next);
+      setSetupSource(fallback.source);
+      persistCurrent(next, fallback.source);
+    }
+
     setViewState(loadViewType());
     setKeyboardTypeState(loadKeyboardType());
     setSoundSettings(loadSoundSettings(uid));
@@ -209,7 +309,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     setCloudHydrated(false);
     setReady(true);
     void preloadSounds();
-  }, [uid]);
+  }, [authLoading, persistCurrent, uid]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 640px)");
@@ -222,16 +322,16 @@ export function CounterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!uid || !userDoc.data || cloudHydrated) return;
     const data = userDoc.data;
-    if (data.presets && data.presets.length > 0) {
-      const live = data.presets.map(dbRowsToLive);
+    if (Array.isArray(data.presets)) {
+      const needsStableIds = data.presets.some((item) => !item.id);
+      const live = dedupePresetIds(data.presets.map(dbRowsToLive));
       setPresets(live);
-      setSelectedId(live[0].id);
-      saveLocalPresets(live, uid);
+      if (needsStableIds) void persistSavedPresets(live);
+      else saveLocalPresets(live, uid);
     } else {
-      const seed = ensurePresets(loadStoredPresets(uid) ?? loadLocalPresets());
+      const seed = dedupePresetIds(loadLocalPresets(uid));
       setPresets(seed);
-      setSelectedId(seed[0].id);
-      void saveCloudPresets.mutateAsync({ presets: seed, includeEmail: true });
+      void persistSavedPresets(seed, true);
     }
     if (data.tableSettings?.soundSettings) {
       setSoundSettings(data.tableSettings.soundSettings);
@@ -239,17 +339,22 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     }
     setCloudHydrated(true);
     setReady(true);
-  }, [uid, userDoc.data, cloudHydrated, saveCloudPresets]);
+  }, [cloudHydrated, persistSavedPresets, uid, userDoc.data]);
 
-  const updatePreset = useCallback(
-    (updater: (current: Preset) => Preset, resetUndo = false) => {
-      setPresets((list) =>
-        list.map((p) => (p.id === selectedId ? updater(p) : p)),
-      );
-      if (resetUndo) setUndoStack([]);
-    },
-    [selectedId],
-  );
+  useEffect(() => {
+    if (setupSource.kind !== "saved") return;
+    if (presets.some((item) => item.id === setupSource.id)) return;
+    const matched = presets.find((item) => item.name === setupSource.name);
+    if (matched) {
+      const source: SetupSource = { kind: "saved", id: matched.id, name: matched.name };
+      setSetupSource(source);
+      persistCurrent(preset, source);
+      return;
+    }
+    const nextSource: SetupSource = { kind: "custom", name: setupSource.name };
+    setSetupSource(nextSource);
+    persistCurrent(preset, nextSource);
+  }, [persistCurrent, preset, presets, setupSource]);
 
   const persistEstimate = useCallback(
     (cells: EstimateCell[], max = fieldCountMax, key = fieldCountKey) => {
@@ -273,7 +378,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
         try {
           void navigator.vibrate?.(200);
         } catch {
-          /* ignore */
+          // Ignore vibration errors.
         }
       } else if (outcome === "blocked") {
         playChannel("max", soundSettings);
@@ -284,49 +389,90 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     [soundSettings],
   );
 
-  const selectPreset = useCallback((id: string) => {
-    setPresets((list) =>
-      list.map((p) =>
-        p.id === id ? { ...p, rows: p.rows.map((r) => ({ ...r, count: 0 })) } : p,
-      ),
-    );
-    setSelectedId(id);
-    setUndoStack([]);
-    setMorphology(EMPTY_MORPHOLOGY);
-  }, []);
+  const updatePreset = useCallback(
+    (updater: (current: Preset) => Preset, options?: { persistStructure?: boolean }) => {
+      setPreset((current) => {
+        const next = updater(current);
+        if (options?.persistStructure) persistCurrent(next, setupSource);
+        return next;
+      });
+    },
+    [persistCurrent, setupSource],
+  );
 
-  const saveNow = useCallback(async () => {
-    const stripped = presets.map((p) => ({
-      ...p,
-      rows: p.rows.map((r) => ({ ...r, count: 0 })),
-    }));
-    persistEstimate(estimateCells);
-    if (uid) {
-      await saveCloudPresets.mutateAsync({ presets: stripped });
-    } else {
-      saveLocalPresets(stripped);
-    }
-  }, [presets, estimateCells, persistEstimate, saveCloudPresets, uid]);
+  const applySavedPreset = useCallback(
+    (id: string, force = false) => {
+      const next = presets.find((item) => item.id === id);
+      if (!next) return false;
+      return adoptTemplate(next, { kind: "saved", id: next.id, name: next.name }, force);
+    },
+    [adoptTemplate, presets],
+  );
 
-  const createPreset = useCallback((name: string, maxWBC: number) => {
-    const next = blankPreset(name, maxWBC);
-    setPresets((list) => [...list, next]);
-    setSelectedId(next.id);
-    setUndoStack([]);
-  }, []);
+  const saveCurrentAsPreset = useCallback(
+    async (name: string) => {
+      const cleaned = name.trim() || "New Preset";
+      const nextPreset = { ...stripCountsForSave(preset), id: newId(), name: cleaned };
+      const nextList = dedupePresetIds([...presets, nextPreset]);
+      setPresets(nextList);
+      const source: SetupSource = { kind: "saved", id: nextPreset.id, name: nextPreset.name };
+      setSetupSource(source);
+      persistCurrent(preset, source);
+      await persistSavedPresets(nextList);
+    },
+    [persistCurrent, persistSavedPresets, preset, presets],
+  );
 
-  const deletePreset = useCallback(() => {
-    setPresets((list) => {
-      const next = ensurePresets(list.filter((p) => p.id !== selectedId));
-      setSelectedId(next[0].id);
-      return next;
-    });
-    setUndoStack([]);
-  }, [selectedId]);
+  const updateSavedPreset = useCallback(async (id: string) => {
+    const existing = presets.find((item) => item.id === id);
+    if (!existing) return;
+    const nextPreset = {
+      ...stripCountsForSave(preset),
+      id: existing.id,
+      name: existing.name,
+    };
+    const nextList = presets.map((item) => (item.id === id ? nextPreset : item));
+    setPresets(nextList);
+    const source: SetupSource = { kind: "saved", id: existing.id, name: existing.name };
+    setSetupSource(source);
+    persistCurrent(preset, source);
+    await persistSavedPresets(nextList);
+  }, [persistCurrent, persistSavedPresets, preset, presets]);
+
+  const renameSavedPreset = useCallback(
+    async (id: string, name: string) => {
+      const cleaned = name.trim();
+      if (!cleaned) return;
+      const nextList = presets.map((item) => (item.id === id ? { ...item, name: cleaned } : item));
+      setPresets(nextList);
+      if (setupSource.kind === "saved" && setupSource.id === id) {
+        const source: SetupSource = { kind: "saved", id, name: cleaned };
+        setSetupSource(source);
+        persistCurrent(preset, source);
+      }
+      await persistSavedPresets(nextList);
+    },
+    [persistCurrent, persistSavedPresets, preset, presets, setupSource],
+  );
+
+  const deleteSavedPreset = useCallback(
+    async (id: string) => {
+      const target = presets.find((item) => item.id === id);
+      if (!target) return;
+      const nextList = presets.filter((item) => item.id !== id);
+      setPresets(nextList);
+      if (setupSource.kind === "saved" && setupSource.id === id) {
+        const source: SetupSource = { kind: "custom", name: target.name };
+        setSetupSource(source);
+        persistCurrent(preset, source);
+      }
+      await persistSavedPresets(nextList);
+    },
+    [persistCurrent, persistSavedPresets, preset, presets, setupSource],
+  );
 
   const bumpRow = useCallback(
     (id: string, delta: 1 | -1) => {
-      if (!preset) return;
       const result = applyDiffDelta(preset.rows, id, delta, preset.maxWBC);
       if (result.outcome === "ok") {
         updatePreset((p) => ({ ...p, rows: result.rows }));
@@ -335,7 +481,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       const row = preset.rows.find((r) => r.id === id);
       feedback(result.outcome, id, row?.key);
     },
-    [preset, updatePreset, feedback],
+    [feedback, preset, updatePreset],
   );
 
   const bumpEstimateCell = useCallback(
@@ -350,14 +496,12 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       );
       if (result.outcome === "ok") {
         setEstimateCells(result.cells);
-        setUndoStack((s) =>
-          pushUndo(s, { kind: "estimate-cell", cellId: id, delta }),
-        );
+        setUndoStack((s) => pushUndo(s, { kind: "estimate-cell", cellId: id, delta }));
       }
       const cell = estimateCells.find((c) => c.id === id);
       feedback(result.outcome, id, cell?.key);
     },
-    [estimateCells, fieldCount, fieldCountMax, increase, feedback],
+    [estimateCells, feedback, fieldCount, fieldCountMax, increase],
   );
 
   const bumpField = useCallback(
@@ -369,7 +513,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       }
       feedback(result.outcome, null, fieldCountKey);
     },
-    [fieldCount, fieldCountMax, fieldCountKey, feedback],
+    [feedback, fieldCount, fieldCountKey, fieldCountMax],
   );
 
   const handleKey = useCallback(
@@ -383,7 +527,6 @@ export function CounterProvider({ children }: { children: ReactNode }) {
         if (cell) bumpEstimateCell(cell.id, increase ? 1 : -1);
         return;
       }
-      if (!preset) return;
       const result = applyDiffKey(preset.rows, key, increase, preset.maxWBC);
       if (result.outcome === "ok" && result.rowId) {
         updatePreset((p) => ({ ...p, rows: result.rows }));
@@ -398,15 +541,16 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       feedback(result.outcome, result.rowId, key);
     },
     [
-      view,
-      fieldCountKey,
+      bumpEstimateCell,
       bumpField,
       estimateCells,
-      bumpEstimateCell,
-      increase,
-      preset,
-      updatePreset,
       feedback,
+      fieldCountKey,
+      increase,
+      preset.rows,
+      preset.maxWBC,
+      updatePreset,
+      view,
     ],
   );
 
@@ -418,7 +562,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
         setUndoStack((stack) => {
           const last = stack.at(-1);
           if (!last) return stack;
-          if (last.kind === "diff" && preset) {
+          if (last.kind === "diff") {
             const reverse: 1 | -1 = last.delta === 1 ? -1 : 1;
             const result = applyDiffDelta(
               preset.rows,
@@ -461,36 +605,30 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleKey, preset, updatePreset, fieldCount, fieldCountMax]);
+  }, [fieldCount, fieldCountMax, handleKey, preset.maxWBC, preset.rows, updatePreset]);
 
   const bindRowKey = useCallback(
     (id: string, key: string) => {
-      if (!preset) return false;
-      const used = keysInUse(
-        [...preset.rows, ...estimateCells.map((c) => ({ id: c.id, key: c.key }))],
-        id,
-      );
-      if (used.has(key) || key === fieldCountKey) {
+      if (!canAssignKey(key, preset.rows, id)) {
         pulse(setKeyErrorId, id, 1000);
         return false;
       }
-      updatePreset((p) => ({
-        ...p,
-        rows: p.rows.map((r) => (r.id === id ? { ...r, key } : r)),
-      }));
+      updatePreset(
+        (p) => ({
+          ...p,
+          rows: p.rows.map((r) => (r.id === id ? { ...r, key } : r)),
+        }),
+        { persistStructure: true },
+      );
       return true;
     },
-    [preset, estimateCells, fieldCountKey, updatePreset],
+    [preset.rows, updatePreset],
   );
 
   const bindEstimateKey = useCallback(
     (id: string | "field", key: string) => {
-      const used = keysInUse(
-        [...(preset?.rows ?? []), ...estimateCells],
-        id === "field" ? undefined : id,
-      );
       if (id === "field") {
-        if (used.has(key)) {
+        if (!canAssignKey(key, estimateCells)) {
           pulse(setKeyErrorId, "field", 1000);
           return false;
         }
@@ -498,7 +636,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
         persistEstimate(estimateCells, fieldCountMax, key);
         return true;
       }
-      if ((used.has(key) && estimateCells.find((c) => c.id === id)?.key !== key) || key === fieldCountKey) {
+      if (!canAssignKey(key, estimateCells, id, [fieldCountKey])) {
         pulse(setKeyErrorId, id, 1000);
         return false;
       }
@@ -509,31 +647,58 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       });
       return true;
     },
-    [preset, estimateCells, fieldCountKey, fieldCountMax, persistEstimate],
+    [estimateCells, fieldCountKey, fieldCountMax, persistEstimate],
   );
 
   const clearSession = useCallback(() => {
     if (view === "estimate") {
       setEstimateCells((cells) => zeroEstimate(cells));
       setFieldCount(0);
-    } else if (preset) {
+    } else {
       updatePreset((p) => ({ ...p, rows: clearRowCounts(p.rows) }));
     }
     setUndoStack([]);
-  }, [view, preset, updatePreset]);
+  }, [updatePreset, view]);
 
   const undo = useCallback(() => {
     const event = new KeyboardEvent("keydown", { key: "Backspace" });
     window.dispatchEvent(event);
   }, []);
 
+  const loadHistoryEntry = useCallback(
+    (id: string, force = false) => {
+      const entry = history.find((item) => item.id === id);
+      if (!entry) return false;
+      if (!force && anyCounts(preset.rows)) return false;
+
+      const next = presetFromHistory(entry, [...presets, preset]);
+      const source: SetupSource = {
+        kind: "history",
+        name: entry.presetName || "History count",
+      };
+      setPreset(next);
+      setSetupSource(source);
+      setWbcCount(entry.wbcCount);
+      setMorphology(entry.morphology);
+      setUndoStack([]);
+      setFlashRowId(null);
+      setFlashKey(null);
+      setViewState("standard");
+      saveViewType("standard");
+      persistCurrent(next, source);
+      return true;
+    },
+    [history, persistCurrent, preset, presets],
+  );
+
   const saveCountToHistory = useCallback(() => {
-    if (!preset) return;
+    if (authLoading) return;
     const stats = rowStats(preset.rows, wbcCount);
+    const sourceLabel = setupSource.kind === "custom" ? "Custom setup" : setupSource.name;
     const entry: HistoryEntry = {
       id: newId(),
       savedAt: Date.now(),
-      presetName: preset.name,
+      presetName: sourceLabel,
       tally: tally(preset.rows),
       maxWBC: preset.maxWBC,
       wbcCount,
@@ -542,10 +707,12 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       alc: alc(preset.rows, wbcCount),
       meRatio: meRatio(preset.rows),
       rows: preset.rows.map((r) => ({
+        key: r.key,
         cell: r.cell,
         count: r.count,
         ignore: r.ignore,
         nrbc: r.nrbc,
+        lineage: r.lineage,
         relative: stats.get(r.id)?.relative ?? 0,
         absolute: stats.get(r.id)?.absolute ?? 0,
       })),
@@ -556,71 +723,77 @@ export function CounterProvider({ children }: { children: ReactNode }) {
       saveHistory(next, uid);
       return next;
     });
-  }, [preset, wbcCount, morphology, uid]);
+  }, [authLoading, morphology, preset, setupSource, uid, wbcCount]);
 
   const stats = useMemo(
-    () => rowStats(preset?.rows ?? [], wbcCount),
-    [preset, wbcCount],
+    () => rowStats(preset.rows, wbcCount),
+    [preset.rows, wbcCount],
   );
 
-  const value = useMemo<CounterContextValue>(() => {
-    const current = preset ?? blankPreset();
-    return {
-      ready,
-      saving: saveCloudPresets.isPending,
-      presets,
-      selectedId: current.id,
-      preset: current,
-      wbcCount,
-      increase,
-      view,
-      keyboardType: isHandset ? "numpad" : keyboardType,
-      isHandset,
-      stats,
-      tallyValue: tally(current.rows),
-      corrected: correctedWbc(current.rows, wbcCount),
-      ancValue: anc(current.rows, wbcCount),
-      alcValue: alc(current.rows, wbcCount),
-      me: meRatio(current.rows),
-      flashRowId,
-      flashKey,
-      flashTick,
-      shake,
-      keyErrorId,
-      morphology,
-      estimate: {
-        fieldCount,
-        fieldCountMax,
-        fieldCountKey,
-        cells: estimateCells,
-      },
-      print,
-      history,
-      soundSettings,
-      setWbcCount,
-      setIncrease,
-      setView: (v) => {
-        setViewState(v);
-        saveViewType(v);
-      },
-      setKeyboardType: (v) => {
-        setKeyboardTypeState(v);
-        saveKeyboardType(v);
-      },
-      selectPreset,
-      saveNow,
-      createPreset,
-      deletePreset,
-      renamePreset: (name) => updatePreset((p) => ({ ...p, name })),
-      setMaxWBC: (n) => updatePreset((p) => ({ ...p, maxWBC: Math.max(1, Math.floor(n) || 1) })),
-      updateRow: (id, patch) =>
-        updatePreset((p) => ({
+  const value = useMemo<CounterContextValue>(() => ({
+    ready,
+    saving: saveCloudPresets.isPending,
+    presets,
+    preset,
+    setupSource,
+    wbcCount,
+    increase,
+    view,
+    keyboardType: isHandset ? "numpad" : keyboardType,
+    isHandset,
+    stats,
+    tallyValue: tally(preset.rows),
+    corrected: correctedWbc(preset.rows, wbcCount),
+    ancValue: anc(preset.rows, wbcCount),
+    alcValue: alc(preset.rows, wbcCount),
+    me: meRatio(preset.rows),
+    flashRowId,
+    flashKey,
+    flashTick,
+    shake,
+    keyErrorId,
+    morphology,
+    estimate: {
+      fieldCount,
+      fieldCountMax,
+      fieldCountKey,
+      cells: estimateCells,
+    },
+    print,
+    history,
+    soundSettings,
+    setWbcCount,
+    setIncrease,
+    setView: (v) => {
+      setViewState(v);
+      saveViewType(v);
+    },
+    setKeyboardType: (v) => {
+      setKeyboardTypeState(v);
+      saveKeyboardType(v);
+    },
+    applySavedPreset,
+    saveCurrentAsPreset,
+    updateSavedPreset,
+    renameSavedPreset,
+    deleteSavedPreset,
+    setMaxWBC: (n) =>
+      updatePreset(
+        (p) => ({ ...p, maxWBC: Math.max(1, Math.floor(n) || 1) }),
+        { persistStructure: true },
+      ),
+    updateRow: (id, patch) =>
+      updatePreset(
+        (p) => ({
           ...p,
           rows: p.rows.map((r) => (r.id === id ? { ...r, ...patch } : r)),
-        })),
-      addRow: () => {
-        const id = newId();
-        updatePreset((p) => ({
+        }),
+        { persistStructure: true },
+      ),
+    addRow: () => {
+      const id = newId();
+      updatePreset(
+        (p) => ({
           ...p,
           rows: [
             ...p.rows,
@@ -634,106 +807,118 @@ export function CounterProvider({ children }: { children: ReactNode }) {
               lineage: "none" as Lineage,
             },
           ],
-        }));
-        return id;
-      },
-      removeRow: (id) =>
-        updatePreset((p) => ({
+        }),
+        { persistStructure: true },
+      );
+      return id;
+    },
+    removeRow: (id) =>
+      updatePreset(
+        (p) => ({
           ...p,
           rows: p.rows.filter((r) => r.id !== id),
-        })),
-      reorderRows: (from, to) =>
-        updatePreset((p) => {
+        }),
+        { persistStructure: true },
+      ),
+    reorderRows: (from, to) =>
+      updatePreset(
+        (p) => {
           const rows = [...p.rows];
           const [moved] = rows.splice(from, 1);
           rows.splice(to, 0, moved);
           return { ...p, rows };
-        }),
-      bindRowKey,
-      clearSession,
-      undo,
-      bumpRow,
-      setMorphology,
-      setEstimateMeta: (patch) => {
-        if (patch.fieldCountMax != null) {
-          setFieldCountMax(patch.fieldCountMax);
-          persistEstimate(estimateCells, patch.fieldCountMax, fieldCountKey);
-        }
-        if (patch.fieldCountKey != null) {
-          setFieldCountKey(patch.fieldCountKey);
-        }
-      },
-      updateEstimateCell: (id, patch) => {
-        setEstimateCells((cells) => {
-          const next = cells.map((c) => (c.id === id ? { ...c, ...patch } : c));
-          persistEstimate(next);
-          return next;
-        });
-      },
-      addEstimateCell: () => {
-        const id = newId();
-        setEstimateCells((cells) => {
-          const next = [...cells, { id, key: "", name: "", factor: 15000, count: 0 }];
-          persistEstimate(next);
-          return next;
-        });
-        return id;
-      },
-      removeEstimateCell: (id) => {
-        setEstimateCells((cells) => {
-          const next = cells.filter((c) => c.id !== id);
-          persistEstimate(next);
-          return next;
-        });
-      },
-      bindEstimateKey,
-      bumpEstimateCell,
-      bumpField,
-      setPrint,
-      persistPrint: () => savePrintSettings(print),
-      restorePrint: () => setPrint(loadPrintSettings()),
-      saveCountToHistory,
-      deleteHistoryEntry: (id) => {
-        setHistory((list) => {
-          const next = list.filter((e) => e.id !== id);
-          saveHistory(next, uid);
-          return next;
-        });
-      },
-      clearHistory: () => {
-        setHistory([]);
-        saveHistory([], uid);
-      },
-      updateSounds: (next) => {
-        setSoundSettings(next);
-        if (uid) void saveCloudSounds.mutateAsync(next);
-        else saveSoundSettings(next);
-      },
-      replacePresets: (next) => {
-        const list = ensurePresets(next);
-        setPresets(list);
-        setSelectedId(list[0].id);
-        setUndoStack([]);
-        if (uid) void saveCloudPresets.mutateAsync({ presets: list });
-        else saveLocalPresets(list);
-      },
-      mergePresets: (incoming) => {
-        const next = ensurePresets([...presets, ...incoming]);
-        setPresets(next);
-        if (uid) void saveCloudPresets.mutateAsync({ presets: next });
-        else saveLocalPresets(next);
-      },
-    };
-  }, [
+        },
+        { persistStructure: true },
+      ),
+    bindRowKey,
+    clearSession,
+    undo,
+    bumpRow,
+    setMorphology,
+    setEstimateMeta: (patch) => {
+      if (patch.fieldCountMax != null) {
+        setFieldCountMax(patch.fieldCountMax);
+        persistEstimate(estimateCells, patch.fieldCountMax, fieldCountKey);
+      }
+      if (patch.fieldCountKey != null) {
+        setFieldCountKey(patch.fieldCountKey);
+      }
+    },
+    updateEstimateCell: (id, patch) => {
+      setEstimateCells((cells) => {
+        const next = cells.map((c) => (c.id === id ? { ...c, ...patch } : c));
+        persistEstimate(next);
+        return next;
+      });
+    },
+    addEstimateCell: () => {
+      const id = newId();
+      setEstimateCells((cells) => {
+        const next = [...cells, { id, key: "", name: "", factor: 15000, count: 0 }];
+        persistEstimate(next);
+        return next;
+      });
+      return id;
+    },
+    removeEstimateCell: (id) => {
+      setEstimateCells((cells) => {
+        const next = cells.filter((c) => c.id !== id);
+        persistEstimate(next);
+        return next;
+      });
+    },
+    bindEstimateKey,
+    bumpEstimateCell,
+    bumpField,
+    setPrint,
+    persistPrint: () => savePrintSettings(print),
+    restorePrint: () => setPrint(loadPrintSettings()),
+    saveCountToHistory,
+    loadHistoryEntry,
+    deleteHistoryEntry: (id) => {
+      if (authLoading) return;
+      setHistory((list) => {
+        const next = list.filter((e) => e.id !== id);
+        saveHistory(next, uid);
+        return next;
+      });
+    },
+    clearHistory: () => {
+      if (authLoading) return;
+      setHistory([]);
+      saveHistory([], uid);
+    },
+    updateSounds: (next) => {
+      setSoundSettings(next);
+      if (uid) void saveCloudSounds.mutateAsync(next);
+      else saveSoundSettings(next);
+    },
+    replacePresets: async (next) => {
+      const list = dedupePresetIds(next);
+      setPresets(list);
+      await persistSavedPresets(list);
+      if (setupSource.kind === "saved" && !list.some((item) => item.id === setupSource.id)) {
+        const source: SetupSource = { kind: "custom", name: setupSource.name };
+        setSetupSource(source);
+        persistCurrent(preset, source);
+      }
+    },
+    mergePresets: async (incoming) => {
+      const list = dedupePresetIds([...presets, ...incoming]);
+      setPresets(list);
+      await persistSavedPresets(list);
+    },
+  }), [
     ready,
     saveCloudPresets.isPending,
     presets,
     preset,
+    setupSource,
     wbcCount,
     increase,
     view,
-    keyboardType,
     isHandset,
+    keyboardType,
     stats,
     flashRowId,
     flashKey,
@@ -748,10 +933,11 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     print,
     history,
     soundSettings,
-    selectPreset,
-    saveNow,
-    createPreset,
-    deletePreset,
+    applySavedPreset,
+    saveCurrentAsPreset,
+    updateSavedPreset,
+    renameSavedPreset,
+    deleteSavedPreset,
     updatePreset,
     bindRowKey,
     clearSession,
@@ -762,9 +948,12 @@ export function CounterProvider({ children }: { children: ReactNode }) {
     bumpEstimateCell,
     bumpField,
     saveCountToHistory,
-    saveCloudPresets,
-    saveCloudSounds,
+    loadHistoryEntry,
+    authLoading,
     uid,
+    saveCloudSounds,
+    persistSavedPresets,
+    persistCurrent,
   ]);
 
   return (

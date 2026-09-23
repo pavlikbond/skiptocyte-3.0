@@ -185,12 +185,27 @@ export function anyCounts(rows: DiffRow[]) {
 }
 
 export function keysInUse(
-  rows: { id: string; key: string }[],
+  rows: { id: string; key: string | number }[],
   exceptId?: string,
 ): Set<string> {
   return new Set(
-    rows.filter((r) => r.key && r.id !== exceptId).map((r) => r.key),
+    rows
+      .filter((r) => r.id !== exceptId && r.key !== "" && r.key != null)
+      .map((r) => String(r.key)),
   );
+}
+
+/** True when `key` is free to bind. Compare within one view only — standard and estimate share a keypad but not a key namespace. */
+export function canAssignKey(
+  key: string,
+  occupied: { id: string; key: string | number }[],
+  exceptId?: string,
+  reserved: (string | number)[] = [],
+): boolean {
+  const k = String(key);
+  if (!k) return false;
+  if (reserved.some((r) => String(r) === k)) return false;
+  return !keysInUse(occupied, exceptId).has(k);
 }
 
 export function applyEstimateCellDelta(

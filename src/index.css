@@ -340,13 +340,17 @@ a[href] {
   animation: tally-shake 350ms ease-in-out;
 }
 
+.counter-pad {
+  width: calc(4 * 4.5rem + 3 * 0.3rem);
+  margin-inline: auto;
+}
+
 .numpad-grid {
   display: grid;
   grid-template-columns: repeat(4, 4.5rem);
   grid-template-rows: repeat(5, 4.5rem);
   gap: 0.3rem;
-  width: max-content;
-  margin-inline: auto;
+  width: 100%;
 }
 
 .numpad-plus {
