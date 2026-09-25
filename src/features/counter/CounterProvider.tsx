@@ -296,10 +296,15 @@ export function CounterProvider({ children }: { children: ReactNode }) {
   );
 
   const feedback = useCallback(
-    (outcome: "ok" | "blocked" | "unbound", rowId?: string | null, key?: string) => {
+    (
+      outcome: "ok" | "blocked" | "unbound",
+      rowId?: string | null,
+      key?: string,
+      reachedLimit = false,
+    ) => {
       void resumeAudio();
       if (outcome === "ok") {
-        playChannel("change", soundSettings);
+        playChannel(reachedLimit ? "max" : "change", soundSettings);
         if (rowId) setFlashRowId(rowId);
         if (key) setFlashKey(key);
         if (rowId || key) setFlashTick((n) => n + 1);
@@ -307,6 +312,10 @@ export function CounterProvider({ children }: { children: ReactNode }) {
           void navigator.vibrate?.(200);
         } catch {
           // Ignore vibration errors.
+        }
+        if (reachedLimit) {
+          setShake(true);
+          window.setTimeout(() => setShake(false), 350);
         }
       } else if (outcome === "blocked") {
         playChannel("max", soundSettings);
@@ -422,7 +431,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
         setUndoStack((s) => pushUndo(s, { kind: "diff", rowId: id, delta }));
       }
       const row = preset.rows.find((r) => r.id === id);
-      feedback(result.outcome, id, row?.key);
+      feedback(result.outcome, id, row?.key, result.reachedLimit);
     },
     [feedback, preset, updatePreset],
   );
@@ -442,7 +451,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
         setUndoStack((s) => pushUndo(s, { kind: "estimate-cell", cellId: id, delta }));
       }
       const cell = estimateCells.find((c) => c.id === id);
-      feedback(result.outcome, id, cell?.key);
+      feedback(result.outcome, id, cell?.key, result.reachedLimit);
     },
     [estimateCells, feedback, fieldCount, fieldCountMax, increase],
   );
@@ -454,7 +463,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
         setFieldCount(result.fieldCount);
         setUndoStack((s) => pushUndo(s, { kind: "estimate-field", delta }));
       }
-      feedback(result.outcome, null, fieldCountKey);
+      feedback(result.outcome, null, fieldCountKey, result.reachedLimit);
     },
     [feedback, fieldCount, fieldCountKey, fieldCountMax],
   );
@@ -481,7 +490,7 @@ export function CounterProvider({ children }: { children: ReactNode }) {
           }),
         );
       }
-      feedback(result.outcome, result.rowId, key);
+      feedback(result.outcome, result.rowId, key, result.reachedLimit);
     },
     [
       bumpEstimateCell,

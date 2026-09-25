@@ -38,6 +38,16 @@ describe("tally and ignore", () => {
     expect(tally(rows)).toBe(40);
   });
 
+  it("marks the increment that fills the limit", () => {
+    const rows = [r({ id: "n", cell: "Neutrophil", key: "5", count: 99 })];
+    const filled = applyDiffKey(rows, "5", true, 100);
+    expect(filled.outcome).toBe("ok");
+    expect(filled.reachedLimit).toBe(true);
+    expect(tally(filled.rows)).toBe(100);
+    const short = applyDiffKey(rows, "5", true, 200);
+    expect(short.reachedLimit).toBe(false);
+  });
+
   it("blocks increment of non-ignored rows at max", () => {
     const rows = [
       r({ id: "n", cell: "Neutrophil", key: "5", count: 100 }),
@@ -120,6 +130,10 @@ describe("estimate", () => {
     expect(r1.outcome).toBe("blocked");
     const r2 = applyFieldDelta(10, 10, 1);
     expect(r2.outcome).toBe("blocked");
+    const filled = applyFieldDelta(9, 10, 1);
+    expect(filled.outcome).toBe("ok");
+    expect(filled.reachedLimit).toBe(true);
+    expect(filled.fieldCount).toBe(10);
     const r3 = applyFieldDelta(0, 10, -1);
     expect(r3.outcome).toBe("blocked");
   });

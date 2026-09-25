@@ -143,24 +143,28 @@ export function applyDiffDelta(
   rowId: string,
   delta: 1 | -1,
   maxWBC: number,
-): { rows: DiffRow[]; outcome: CountOutcome } {
+): { rows: DiffRow[]; outcome: CountOutcome; reachedLimit: boolean } {
   const idx = rows.findIndex((r) => r.id === rowId);
-  if (idx < 0) return { rows, outcome: 'unbound' };
+  if (idx < 0) return { rows, outcome: 'unbound', reachedLimit: false };
   const row = rows[idx];
   if (delta === 1) {
     if (!row.ignore && tally(rows) >= maxWBC) {
-      return { rows, outcome: 'blocked' };
+      return { rows, outcome: 'blocked', reachedLimit: false };
     }
     const next = rows.map((r, i) =>
       i === idx ? { ...r, count: r.count + 1 } : r,
     );
-    return { rows: next, outcome: 'ok' };
+    return {
+      rows: next,
+      outcome: 'ok',
+      reachedLimit: !row.ignore && tally(next) >= maxWBC,
+    };
   }
-  if (row.count <= 0) return { rows, outcome: 'blocked' };
+  if (row.count <= 0) return { rows, outcome: 'blocked', reachedLimit: false };
   const next = rows.map((r, i) =>
     i === idx ? { ...r, count: r.count - 1 } : r,
   );
-  return { rows: next, outcome: 'ok' };
+  return { rows: next, outcome: 'ok', reachedLimit: false };
 }
 
 export function applyDiffKey(
@@ -168,9 +172,9 @@ export function applyDiffKey(
   key: string,
   increase: boolean,
   maxWBC: number,
-): { rows: DiffRow[]; rowId: string | null; outcome: CountOutcome } {
+): { rows: DiffRow[]; rowId: string | null; outcome: CountOutcome; reachedLimit: boolean } {
   const row = rows.find((r) => r.key !== '' && r.key === key);
-  if (!row) return { rows, rowId: null, outcome: 'unbound' };
+  if (!row) return { rows, rowId: null, outcome: 'unbound', reachedLimit: false };
   const delta: 1 | -1 = increase ? 1 : -1;
   const result = applyDiffDelta(rows, row.id, delta, maxWBC);
   return { ...result, rowId: row.id };
@@ -247,39 +251,40 @@ export function applyEstimateCellDelta(
   fieldCount: number,
   fieldCountMax: number,
   increase: boolean,
-): { cells: EstimateCell[]; outcome: CountOutcome } {
+): { cells: EstimateCell[]; outcome: CountOutcome; reachedLimit: boolean } {
   const idx = cells.findIndex((c) => c.id === cellId);
-  if (idx < 0) return { cells, outcome: 'unbound' };
+  if (idx < 0) return { cells, outcome: 'unbound', reachedLimit: false };
   const cell = cells[idx];
   if (delta === 1) {
     if (increase && fieldCount >= fieldCountMax) {
-      return { cells, outcome: 'blocked' };
+      return { cells, outcome: 'blocked', reachedLimit: false };
     }
     const next = cells.map((c, i) =>
       i === idx ? { ...c, count: c.count + 1 } : c,
     );
-    return { cells: next, outcome: 'ok' };
+    return { cells: next, outcome: 'ok', reachedLimit: false };
   }
-  if (cell.count <= 0) return { cells, outcome: 'blocked' };
+  if (cell.count <= 0) return { cells, outcome: 'blocked', reachedLimit: false };
   const next = cells.map((c, i) =>
     i === idx ? { ...c, count: c.count - 1 } : c,
   );
-  return { cells: next, outcome: 'ok' };
+  return { cells: next, outcome: 'ok', reachedLimit: false };
 }
 
 export function applyFieldDelta(
   fieldCount: number,
   fieldCountMax: number,
   delta: 1 | -1,
-): { fieldCount: number; outcome: CountOutcome } {
+): { fieldCount: number; outcome: CountOutcome; reachedLimit: boolean } {
   if (delta === 1) {
     if (fieldCount >= fieldCountMax) {
-      return { fieldCount, outcome: 'blocked' };
+      return { fieldCount, outcome: 'blocked', reachedLimit: false };
     }
-    return { fieldCount: fieldCount + 1, outcome: 'ok' };
+    const next = fieldCount + 1;
+    return { fieldCount: next, outcome: 'ok', reachedLimit: next >= fieldCountMax };
   }
-  if (fieldCount <= 0) return { fieldCount, outcome: 'blocked' };
-  return { fieldCount: fieldCount - 1, outcome: 'ok' };
+  if (fieldCount <= 0) return { fieldCount, outcome: 'blocked', reachedLimit: false };
+  return { fieldCount: fieldCount - 1, outcome: 'ok', reachedLimit: false };
 }
 
 export function estimateValues(
