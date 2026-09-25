@@ -33,7 +33,6 @@ import { HowToTour } from "@/features/counter/HowToTour";
 import { KeyboardLayoutToggle, Keypad } from "@/features/counter/Keypad";
 import { MorphologyPanel } from "@/features/counter/MorphologyPanel";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { useCounterHistory } from "@/features/counter/context/useCounterHistory";
 import { useCounterPresets } from "@/features/counter/context/useCounterPresets";
 import { useCounterSession } from "@/features/counter/context/useCounterSession";
 import { EstimateTable } from "@/features/estimate/EstimateTable";
@@ -56,7 +55,6 @@ export function CounterPage() {
 function CounterScreen() {
   const session = useCounterSession();
   const presetLibrary = useCounterPresets();
-  const history = useCounterHistory();
   const setRuntimeActive = session.setRuntimeActive;
   const [clearOpen, setClearOpen] = useState(false);
   const [presetManagerOpen, setPresetManagerOpen] = useState(false);
@@ -68,11 +66,9 @@ function CounterScreen() {
   const [renameName, setRenameName] = useState("");
   const [actionPresetId, setActionPresetId] = useState<string>("");
   const [pendingApply, setPendingApply] = useState<PendingApply>(null);
-  const [historyPrompt, setHistoryPrompt] = useState(false);
   const [tourRun, setTourRun] = useState(0);
   const [wbcText, setWbcText] = useState("");
   const holdRef = useRef<number | null>(null);
-  const prompted = useRef(false);
 
   const sourceLabel = useMemo(() => {
     if (session.setupSource.kind === "custom") return "Unsaved setup";
@@ -105,19 +101,6 @@ function CounterScreen() {
   useEffect(() => {
     if (session.view !== "standard") setTourRun(0);
   }, [session.view]);
-
-  useEffect(() => {
-    if (
-      session.view === "standard" &&
-      session.tallyValue >= session.preset.maxWBC &&
-      session.tallyValue > 0 &&
-      !prompted.current
-    ) {
-      prompted.current = true;
-      setHistoryPrompt(true);
-    }
-    if (session.tallyValue === 0) prompted.current = false;
-  }, [session.tallyValue, session.preset.maxWBC, session.view]);
 
   useEffect(() => {
     setRuntimeActive(true);
@@ -585,20 +568,6 @@ function CounterScreen() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={historyPrompt} onOpenChange={setHistoryPrompt}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Save this count to history?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Anonymous snapshot of cell counts only - no patient fields.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Skip</AlertDialogCancel>
-            <AlertDialogAction onClick={history.saveCountToHistory}>Save</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

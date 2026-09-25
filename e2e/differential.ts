@@ -93,17 +93,6 @@ export async function choosePreset(page: Page, name: string) {
     .click();
 }
 
-export function historyPrompt(page: Page) {
-  return page.getByRole("alertdialog", { name: "Save this count to history?" });
-}
-
-export async function skipHistoryPrompt(page: Page) {
-  const prompt = historyPrompt(page);
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "Skip" }).click();
-  await expect(prompt).toBeHidden();
-}
-
 export async function setLimit(page: Page, value: string) {
   await page.getByLabel("Count limit").fill(value);
   await blurActive(page);

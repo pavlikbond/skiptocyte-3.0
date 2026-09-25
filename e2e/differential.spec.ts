@@ -11,7 +11,6 @@ import {
   expectRelative,
   expectSetup,
   expectTally,
-  historyPrompt,
   labeledSelect,
   modeButton,
   openDifferential,
@@ -21,7 +20,6 @@ import {
   setLimit,
   setLineage,
   sidebar,
-  skipHistoryPrompt,
   STARTER_CELLS,
   startBinding,
   tally,
@@ -126,11 +124,10 @@ test.describe("differential counter", () => {
     await page.keyboard.press("5");
     await page.keyboard.press("5");
     await page.keyboard.press("6");
-    await expect(historyPrompt(page)).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
 
     await page.keyboard.press("5");
     await page.keyboard.press("2");
-    await skipHistoryPrompt(page);
 
     await expectCount(page, "Neutrophil", 2);
     await expectCount(page, "Lymphocyte", 1);
@@ -142,7 +139,7 @@ test.describe("differential counter", () => {
     await expectCount(page, "Neutrophil", 2);
     await expectCount(page, "Lymphocyte", 1);
     await expectTally(page, 3, 3);
-    await expect(historyPrompt(page)).toBeHidden();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
   });
 
   test("the limit cannot drop below 1", async ({ page }) => {
@@ -151,7 +148,6 @@ test.describe("differential counter", () => {
     await expectTally(page, 0, 1);
 
     await page.keyboard.press("5");
-    await skipHistoryPrompt(page);
     await page.keyboard.press("5");
 
     await expectCount(page, "Neutrophil", 1);
@@ -164,7 +160,6 @@ test.describe("differential counter", () => {
     await page.keyboard.press("5");
     await setLimit(page, "2");
 
-    await skipHistoryPrompt(page);
     await expectTally(page, 3, 2);
 
     await page.keyboard.press("5");
@@ -172,37 +167,6 @@ test.describe("differential counter", () => {
     await expectCount(page, "Neutrophil", 3);
     await expectCount(page, "Lymphocyte", 0);
     await expectTally(page, 3, 2);
-  });
-
-  test("the save prompt waits until the tally returns to zero before asking again", async ({
-    page,
-  }) => {
-    await setLimit(page, "2");
-    await page.keyboard.press("5");
-    await page.keyboard.press("5");
-    await skipHistoryPrompt(page);
-
-    await modeButton(page, "-").click();
-    await page.keyboard.press("5");
-    await expectCount(page, "Neutrophil", 1);
-    await expect(historyPrompt(page)).toBeHidden();
-
-    await modeButton(page, "+").click();
-    await page.keyboard.press("5");
-    await expectCount(page, "Neutrophil", 2);
-    await expect(historyPrompt(page)).toBeHidden();
-
-    await modeButton(page, "-").click();
-    await page.keyboard.press("5");
-    await page.keyboard.press("5");
-    await expectTally(page, 0, 2);
-
-    await modeButton(page, "+").click();
-    await page.keyboard.press("5");
-    await page.keyboard.press("5");
-    await skipHistoryPrompt(page);
-    await expectCount(page, "Neutrophil", 2);
-    await expectTally(page, 2, 2);
   });
 
   test("ignored cells stay out of the tally and can still be counted at the limit", async ({
@@ -222,7 +186,6 @@ test.describe("differential counter", () => {
     await expectRelative(page, "Lymphocyte", "100%");
 
     await setLimit(page, "1");
-    await skipHistoryPrompt(page);
     await page.keyboard.press("6");
     await page.keyboard.press("5");
 
@@ -598,8 +561,8 @@ test.describe("differential counter", () => {
     await setLimit(page, "2");
     await page.keyboard.press("5");
     await page.keyboard.press("5");
-    await historyPrompt(page).getByRole("button", { name: "Save" }).click();
-    await expect(historyPrompt(page)).toBeHidden();
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await sidebar(page).getByRole("button", { name: "Save count" }).click();
 
     const saved = sidebar(page).getByRole("button", { name: /2\/2/ });
     await expect(saved).toBeVisible();
@@ -613,7 +576,6 @@ test.describe("differential counter", () => {
     await expectTally(page, 0, 2);
     await saved.click();
     await expect(page.getByRole("alertdialog", { name: "Load this saved count?" })).toHaveCount(0);
-    await skipHistoryPrompt(page);
 
     await expectCount(page, "Neutrophil", 2);
     await expectTally(page, 2, 2);
@@ -630,7 +592,6 @@ test.describe("differential counter", () => {
     await page.keyboard.press("5");
     await page.keyboard.press("6");
     await expectTally(page, 3, 100);
-    await expect(historyPrompt(page)).toBeHidden();
 
     await sidebar(page).getByRole("button", { name: "Save count" }).click();
 
@@ -685,7 +646,6 @@ test.describe("differential counter", () => {
     await page.keyboard.press("9");
 
     await expectTally(page, 7, 80);
-    await expect(historyPrompt(page)).toBeHidden();
     await expect(page.getByText("M:E 2:1", { exact: true })).toBeVisible();
     await expectCount(page, "Neutrophil", 4);
     await expectCount(page, "Lymphocyte", 2);
@@ -767,7 +727,6 @@ test.describe("differential counter", () => {
       await expect(page.getByRole("button", { name: "Keyboard", exact: true })).toBeHidden();
       await setLimit(page, "1");
       await padKey(page, "5").click();
-      await skipHistoryPrompt(page);
       await padKey(page, "5").click();
       await padKey(page, "6").click();
 
