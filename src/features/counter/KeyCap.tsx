@@ -48,7 +48,7 @@ export function KeyCap({
         "mx-auto flex h-8 min-w-12 items-center justify-center rounded-md border px-2 text-sm font-semibold tabular-nums shadow-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
         empty
           ? "border-dashed border-border bg-transparent text-muted-foreground"
-          : "border border-border border-b-2 bg-card text-foreground hover:bg-accent",
+          : "border border-border border-b-2 bg-card text-foreground hover:bg-accent dark:bg-(--inset-surface) dark:hover:bg-(--inset-surface-hover)",
         capturing &&
           "border-ring bg-(--timer-run-wash) text-(--timer-run-ink) ring-[3px] ring-ring/50",
         error && "shake",
