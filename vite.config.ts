@@ -31,6 +31,9 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,mp3,png,ico,woff2}"],
         navigateFallback: "/index.html",
+        // Firebase Hosting owns /__/auth and /__/firebase. Let those navigations
+        // hit the network so Google sign-in is not served the app shell.
+        navigateFallbackDenylist: [/^\/__/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),
