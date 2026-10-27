@@ -769,7 +769,7 @@ test.describe("differential counter", () => {
       await expect(page.getByLabel("Count limit")).toHaveCount(0);
       const padMetrics = await page.evaluate(() => {
         const pad = document.querySelector<HTMLElement>('[data-howto="pad"]');
-        const keys = [...document.querySelectorAll<HTMLElement>('[data-howto="pad"] [data-key]')];
+        const keys = Array.from(document.querySelectorAll<HTMLElement>('[data-howto="pad"] [data-key]'));
         if (!pad || keys.length === 0) return null;
         const keyHeights = keys.map((k) => k.getBoundingClientRect().height);
         return {
@@ -800,7 +800,7 @@ test.describe("differential counter", () => {
       await expect(page.locator('[data-fullscreen-pad="true"]')).toBeVisible();
       const landscape = await page.evaluate(() => {
         const pad = document.querySelector<HTMLElement>('[data-howto="pad"]');
-        const keys = [...document.querySelectorAll<HTMLElement>('[data-howto="pad"] [data-key]')];
+        const keys = Array.from(document.querySelectorAll<HTMLElement>('[data-howto="pad"] [data-key]'));
         if (!pad || keys.length === 0) return null;
         const padBox = pad.getBoundingClientRect();
         const boxes = keys.map((key) => key.getBoundingClientRect());

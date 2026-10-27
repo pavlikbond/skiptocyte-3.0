@@ -5,7 +5,9 @@ import { useCounterSession } from "@/features/counter/context/useCounterSession"
 import { keyLabel, NUMPAD_ENTER } from "@/lib/keys";
 import { cn } from "@/lib/utils";
 
-const NUMPAD: { key: string; label: string; className?: string; hideHandset?: boolean }[] = [
+type PadKey = { key: string; label: string; className?: string; hideHandset?: boolean };
+
+const NUMPAD: PadKey[] = [
   { key: "NumLock", label: "Num", hideHandset: true },
   { key: "/", label: "/" },
   { key: "*", label: "*" },
@@ -27,7 +29,7 @@ const NUMPAD: { key: string; label: string; className?: string; hideHandset?: bo
 
 const HANDSET_NUMPAD_KEYS = ["/", "*", "-", "7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "+"];
 const NUMPAD_BY_KEY = new Map(NUMPAD.map((item) => [item.key, item]));
-const HANDSET_NUMPAD = HANDSET_NUMPAD_KEYS.map((key) => {
+const HANDSET_NUMPAD: PadKey[] = HANDSET_NUMPAD_KEYS.map((key) => {
   const item = NUMPAD_BY_KEY.get(key);
   if (!item) throw new Error(`Missing keypad key: ${key}`);
   // Handset uses a uniform 3-column grid, so skip desktop span classes.
