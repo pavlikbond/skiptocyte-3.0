@@ -734,6 +734,97 @@ test.describe("differential counter", () => {
       await expectCount(page, "Lymphocyte", 0);
       await expectTally(page, 1, 1);
     });
+
+    test("shows 0 . + on pad and counts Peripheral Blood bindings", async ({ page }) => {
+      await expect(padKey(page, "0")).toBeVisible();
+      await expect(padKey(page, ".")).toBeVisible();
+      await expect(padKey(page, "+")).toBeVisible();
+      await expect(padKey(page, "NumLock")).toHaveCount(0);
+      await expect(padKey(page, "NumpadEnter")).toHaveCount(0);
+
+      await choosePreset(page, "Peripheral Blood");
+      await padKey(page, "+").click();
+      await padKey(page, "0").click();
+
+      await expectCount(page, "Other", 1);
+      await expectCount(page, "Blast", 1);
+      await expectTally(page, 2, 100);
+    });
+
+    test("binds a handset keypad key from the mobile key picker", async ({ page }) => {
+      await page.getByRole("button", { name: "Key for Neutrophil: 5" }).click();
+      await expect(page.getByText("Tap to bind keypad key")).toBeVisible();
+      await page.locator('[data-howto="bind-key"][data-key="."]').click();
+
+      await expect(page.getByRole("button", { name: "Key for Neutrophil: ." })).toBeVisible();
+      await padKey(page, ".").click();
+      await expectCount(page, "Neutrophil", 1);
+    });
+
+    test("toggles full screen keypad mode on handset", async ({ page }) => {
+      const toggle = page.getByRole("button", { name: "Enter full screen keypad" });
+      await toggle.click();
+
+      await expect(page.getByRole("button", { name: "Exit full screen keypad" })).toBeVisible();
+      await expect(page.getByLabel("Count limit")).toHaveCount(0);
+      const padMetrics = await page.evaluate(() => {
+        const pad = document.querySelector<HTMLElement>('[data-howto="pad"]');
+        const keys = [...document.querySelectorAll<HTMLElement>('[data-howto="pad"] [data-key]')];
+        if (!pad || keys.length === 0) return null;
+        const keyHeights = keys.map((k) => k.getBoundingClientRect().height);
+        return {
+          padHeight: pad.getBoundingClientRect().height,
+          minKeyHeight: Math.min(...keyHeights),
+          maxKeyHeight: Math.max(...keyHeights),
+        };
+      });
+      expect(padMetrics).not.toBeNull();
+      expect(padMetrics!.padHeight).toBeGreaterThan(420);
+      expect(padMetrics!.minKeyHeight).toBeGreaterThan(80);
+      expect(padMetrics!.maxKeyHeight - padMetrics!.minKeyHeight).toBeLessThan(3);
+      await padKey(page, "5").click();
+      await expectTally(page, 1, 100);
+
+      await page.getByRole("button", { name: "Exit full screen keypad" }).click();
+      await expect(page.getByRole("button", { name: "Enter full screen keypad" })).toBeVisible();
+      await expect(page.getByLabel("Count limit")).toHaveCount(1);
+      await expectCount(page, "Neutrophil", 1);
+    });
+
+    test("keeps full screen keypad active across rotation", async ({ page }) => {
+      await page.getByRole("button", { name: "Enter full screen keypad" }).click();
+      await expect(page.locator('[data-fullscreen-pad="true"]')).toBeVisible();
+
+      await page.setViewportSize({ width: 844, height: 390 });
+      await expect(page.getByRole("button", { name: "Exit full screen keypad" })).toBeVisible();
+      await expect(page.locator('[data-fullscreen-pad="true"]')).toBeVisible();
+      const landscape = await page.evaluate(() => {
+        const pad = document.querySelector<HTMLElement>('[data-howto="pad"]');
+        const keys = [...document.querySelectorAll<HTMLElement>('[data-howto="pad"] [data-key]')];
+        if (!pad || keys.length === 0) return null;
+        const padBox = pad.getBoundingClientRect();
+        const boxes = keys.map((key) => key.getBoundingClientRect());
+        const columns = new Set(boxes.map((box) => Math.round(box.left)));
+        return {
+          padWidth: padBox.width,
+          padRight: padBox.right,
+          minKeyHeight: Math.min(...boxes.map((box) => box.height)),
+          maxKeyRight: Math.max(...boxes.map((box) => box.right)),
+          columns: columns.size,
+        };
+      });
+      expect(landscape).not.toBeNull();
+      expect(landscape!.columns).toBe(5);
+      expect(landscape!.padWidth).toBeGreaterThan(700);
+      expect(landscape!.maxKeyRight).toBeGreaterThan(landscape!.padRight - 8);
+      expect(landscape!.minKeyHeight).toBeGreaterThan(48);
+      await padKey(page, "5").click();
+      await expectTally(page, 1, 100);
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(page.getByRole("button", { name: "Exit full screen keypad" })).toBeVisible();
+      await expect(page.locator('[data-fullscreen-pad="true"]')).toBeVisible();
+    });
   });
 });
 

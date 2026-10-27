@@ -433,17 +433,46 @@ a[href] {
   font-size: 0.9375rem;
 }
 
-@media (max-width: 640px) {
-  .numpad-handset .hide-handset {
-    display: none;
+.numpad-handset .hide-handset {
+  display: none;
+}
+
+.numpad-handset {
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: none;
+  grid-auto-rows: minmax(5.25rem, auto);
+  gap: 0.4rem;
+}
+
+[data-fullscreen-pad="true"] .numpad-handset {
+  height: 100%;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 0.45rem;
+}
+
+/* Landscape fullscreen is short, so use 5 columns x 3 rows and keep the digit block together. */
+@media (orientation: landscape) {
+  [data-fullscreen-pad="true"] .numpad-handset {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
   }
-  .numpad-handset {
-    width: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: none;
-    grid-auto-rows: minmax(5.25rem, auto);
-    gap: 0.4rem;
-  }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="/"] { grid-area: 1 / 1; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="7"] { grid-area: 1 / 2; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="8"] { grid-area: 1 / 3; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="9"] { grid-area: 1 / 4; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="-"] { grid-area: 1 / 5; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="*"] { grid-area: 2 / 1; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="4"] { grid-area: 2 / 2; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="5"] { grid-area: 2 / 3; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="6"] { grid-area: 2 / 4; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="+"] { grid-area: 2 / 5; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="."] { grid-area: 3 / 1; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="1"] { grid-area: 3 / 2; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="2"] { grid-area: 3 / 3; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="3"] { grid-area: 3 / 4; }
+  [data-fullscreen-pad="true"] .numpad-handset [data-key="0"] { grid-area: 3 / 5; }
 }
 
 @media (prefers-reduced-motion: reduce) {

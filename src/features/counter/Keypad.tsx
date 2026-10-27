@@ -2,7 +2,7 @@ import { Grid3x3, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCounterSession } from "@/features/counter/context/useCounterSession";
-import { NUMPAD_ENTER } from "@/lib/keys";
+import { keyLabel, NUMPAD_ENTER } from "@/lib/keys";
 import { cn } from "@/lib/utils";
 
 const NUMPAD: { key: string; label: string; className?: string; hideHandset?: boolean }[] = [
@@ -25,11 +25,20 @@ const NUMPAD: { key: string; label: string; className?: string; hideHandset?: bo
   { key: ".", label: ".", hideHandset: true },
 ];
 
+const HANDSET_NUMPAD_KEYS = ["/", "*", "-", "7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "+"];
+const NUMPAD_BY_KEY = new Map(NUMPAD.map((item) => [item.key, item]));
+const HANDSET_NUMPAD = HANDSET_NUMPAD_KEYS.map((key) => {
+  const item = NUMPAD_BY_KEY.get(key);
+  if (!item) throw new Error(`Missing keypad key: ${key}`);
+  // Handset uses a uniform 3-column grid, so skip desktop span classes.
+  return { key: item.key, label: item.label };
+});
 const KEYBOARD = [
   ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "[", "]"],
   ["a", "s", "d", "f", "g", "h", "j", "k", "l", ";", "'"],
   ["z", "x", "c", "v", "b", "n", "m", ",", ".", "/"],
 ];
+const MOBILE_BINDING_KEYS = HANDSET_NUMPAD_KEYS;
 
 function KeyHint({ children }: { children: string }) {
   return (
@@ -44,11 +53,15 @@ function KeyButton({
   label,
   className,
   hideHandset,
+  handsetLike,
+  fill,
 }: {
   keyValue: string;
   label: string;
   className?: string;
   hideHandset?: boolean;
+  handsetLike?: boolean;
+  fill?: boolean;
 }) {
   const ctx = useCounterSession();
   const bound =
@@ -80,7 +93,8 @@ function KeyButton({
       }
       className={cn(
         "flex min-h-0 touch-manipulation select-none flex-col items-center justify-center rounded-md border border-border bg-background px-0.5 py-0.5 text-sm shadow-sm outline-none hover:bg-accent active:bg-accent cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-        ctx.isHandset && "min-h-21 px-1 py-2 text-lg",
+        handsetLike && !fill && "min-h-21 px-1 py-2 text-lg",
+        fill && "h-full w-full min-h-0 px-1 py-1 text-lg",
         ctx.flashKey === keyValue &&
           (ctx.flashTick % 2 === 0 ? "flash-row-a" : "flash-row-b"),
         captureActive && !captureTaken && "border-ring/60 bg-(--timer-run-wash)",
@@ -111,7 +125,7 @@ function KeyButton({
         <span
           className={cn(
             "mt-1 max-w-full px-0.5 text-[10px] leading-none text-muted-foreground",
-            ctx.isHandset
+            handsetLike
               ? "mt-1.5 line-clamp-2 text-center text-xs leading-tight"
               : "truncate",
           )}
@@ -172,18 +186,29 @@ export function KeyboardLayoutToggle() {
   );
 }
 
-export function Keypad() {
+export function Keypad({ className, fullscreenPad = false }: { className?: string; fullscreenPad?: boolean }) {
   const ctx = useCounterSession();
-  const layout = ctx.isHandset || ctx.keyboardType === "numpad" ? "numpad" : "keyboard";
+  const handsetLike = ctx.isHandset || fullscreenPad;
+  const layout = handsetLike || ctx.keyboardType === "numpad" ? "numpad" : "keyboard";
   const captureTarget = ctx.captureLabel ?? "cell";
+  const captureCurrentKey = !ctx.capture
+    ? ""
+    : ctx.view === "estimate"
+      ? ctx.capture.id === "field"
+        ? ctx.estimate.fieldCountKey
+        : (ctx.estimate.cells.find((c) => c.id === ctx.capture?.id)?.key ?? "")
+      : (ctx.preset.rows.find((r) => r.id === ctx.capture?.id)?.key ?? "");
   const bindingHint =
     ctx.captureNotice ??
     (ctx.capture
       ? `Binding ${captureTarget}...`
-      : "Undo: Backspace or Ctrl+Z.");
+      : handsetLike
+        ? ""
+        : "Undo: Backspace or Ctrl+Z.");
+  const showBindingHint = Boolean(bindingHint);
 
   return (
-    <div className="relative">
+    <div className={cn("relative flex min-h-0 flex-col", className)}>
       {ctx.capture ? (
         <>
           <button
@@ -195,18 +220,61 @@ export function Keypad() {
           <div className="pointer-events-none fixed inset-0 z-60 flex items-start justify-center px-4 pt-18 sm:px-6 sm:pt-22">
           <div
             data-capture-zone
-            className="pointer-events-auto w-full max-w-md rounded-xl border border-border bg-popover p-4 shadow-lg"
+            className="pointer-events-auto max-h-[calc(100dvh-5rem)] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-popover p-4 shadow-lg"
           >
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Key Binding Mode
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Current binding:{" "}
+              <span className="font-semibold text-foreground">
+                {captureCurrentKey ? keyLabel(captureCurrentKey) : "Unbound"}
+              </span>
             </p>
             <p className="mt-1 text-base text-foreground">
               Press any key for <span className="font-semibold text-primary">{captureTarget}</span>.
             </p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Use your keyboard or tap a key on the keypad. <KeyHint>Esc</KeyHint> cancels.{" "}
-              <KeyHint>Delete</KeyHint> or <KeyHint>Backspace</KeyHint> clears this binding.
+              {ctx.isHandset
+                ? "Tap a key below to bind it."
+                : handsetLike
+                ? "Tap a key below to bind it."
+                : "Use your keyboard or tap a key on the keypad."}
+              {!handsetLike ? (
+                <>
+                  {" "}
+                  <KeyHint>Esc</KeyHint> cancels. <KeyHint>Delete</KeyHint> or{" "}
+                  <KeyHint>Backspace</KeyHint> clears this binding.
+                </>
+              ) : null}
             </p>
+            {handsetLike ? (
+              <div className="mt-3 rounded-md border border-border bg-background p-2">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Tap to bind keypad key</p>
+                <div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {MOBILE_BINDING_KEYS.map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        data-capture-zone
+                        data-howto="bind-key"
+                        data-key={k}
+                        aria-label={`Bind ${keyLabel(k)} key`}
+                        aria-pressed={captureCurrentKey === k}
+                        className={cn(
+                          "h-10 rounded border border-border bg-background px-1 text-sm font-medium hover:bg-accent active:bg-accent",
+                          captureCurrentKey === k && "border-ring bg-accent text-accent-foreground ring-2 ring-ring/50",
+                        )}
+                        onClick={() => ctx.captureKey(k)}
+                      >
+                        {keyLabel(k)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
             <div className="mt-3 flex items-center justify-end gap-2">
               <Button
                 type="button"
@@ -233,23 +301,27 @@ export function Keypad() {
           </div>
         </>
       ) : null}
-      <div className={cn(ctx.capture && "relative z-55")}>
-      <div className="mb-2 min-h-4 text-xs text-muted-foreground" aria-live="polite">
-        <span>{bindingHint}</span>
-      </div>
+      <div className={cn("flex min-h-0 flex-1 flex-col", ctx.capture && "relative z-55")}>
+      {showBindingHint ? (
+        <div className="mb-2 min-h-4 text-xs text-muted-foreground" aria-live="polite">
+          <span>{bindingHint}</span>
+        </div>
+      ) : null}
       {layout === "numpad" ? (
         <div
           data-capture-zone
           data-howto="pad"
-          className={cn("numpad-grid", ctx.isHandset && "numpad-handset")}
+          className={cn("numpad-grid", "flex-1", handsetLike && "numpad-handset")}
         >
-          {(ctx.isHandset ? NUMPAD.filter((k) => !k.hideHandset) : NUMPAD).map((k) => (
+          {(handsetLike ? HANDSET_NUMPAD : NUMPAD).map((k) => (
             <KeyButton
               key={k.key}
               keyValue={k.key}
               label={k.label}
               className={k.className}
               hideHandset={k.hideHandset}
+              handsetLike={handsetLike}
+              fill={fullscreenPad}
             />
           ))}
         </div>

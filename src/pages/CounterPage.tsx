@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, CircleHelp, MoreHorizontal } from "lucide-react";
+import { ChevronDown, CircleHelp, Maximize2, Minimize2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,8 +67,14 @@ function CounterScreen() {
   const [actionPresetId, setActionPresetId] = useState<string>("");
   const [pendingApply, setPendingApply] = useState<PendingApply>(null);
   const [tourRun, setTourRun] = useState(0);
+  const [padFullscreen, setPadFullscreen] = useState(false);
+  const [landscape, setLandscape] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(orientation: landscape)").matches,
+  );
   const [wbcText, setWbcText] = useState("");
   const holdRef = useRef<number | null>(null);
+  const fullscreenActive = padFullscreen;
+  const fullscreenLandscape = fullscreenActive && landscape;
 
   const sourceLabel = useMemo(() => {
     if (session.setupSource.kind === "custom") return "Unsaved setup";
@@ -97,6 +103,23 @@ function CounterScreen() {
       return session.wbcCount > 0 ? String(session.wbcCount) : "";
     });
   }, [session.wbcCount]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(orientation: landscape)");
+    const apply = () => setLandscape(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  useEffect(() => {
+    if (!fullscreenActive) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [fullscreenActive]);
 
   useEffect(() => {
     if (session.view !== "standard") setTourRun(0);
@@ -149,7 +172,7 @@ function CounterScreen() {
   return (
     <div className="space-y-3">
       <div className="flex min-w-0 flex-wrap justify-center gap-4">
-        <div className="min-w-[min(100%,36rem)] flex-2 space-y-3">
+        <div className={cn("min-w-[min(100%,36rem)] flex-2 space-y-3", fullscreenActive && "hidden")}>
           <Card className="flex flex-wrap items-center justify-between gap-2">
             <Tabs
               value={session.view}
@@ -231,28 +254,131 @@ function CounterScreen() {
         <Card
           className={cn(
             "max-w-full self-start",
-            session.isHandset
+            fullscreenActive
+              ? "fixed inset-0 z-40 m-0 flex h-dvh max-h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]"
+              : session.isHandset
               ? "w-full"
               : session.keyboardType === "keyboard"
                 ? "w-full min-w-[min(100%,36rem)] max-w-184 flex-1"
                 : "w-[min(100%,21rem)] shrink-0",
           )}
+          data-fullscreen-pad={fullscreenActive ? "true" : "false"}
         >
-          <div className={cn("mb-3 text-center text-3xl font-bold tabular-nums", session.shake && "shake")}>
-            {session.view === "standard"
-              ? `${session.tallyValue} / ${session.preset.maxWBC}`
-              : `${session.estimate.fieldCount} / ${session.estimate.fieldCountMax}`}
-          </div>
-          <Button
-            variant="outline"
-            className="mb-3 w-full"
-            onPointerDown={startHold}
-            onPointerUp={endHold}
-            onPointerLeave={endHold}
-          >
-            Clear
-          </Button>
-          {session.view === "standard" ? (
+          {fullscreenActive ? (
+            fullscreenLandscape ? (
+              <div className="mb-2 flex items-center gap-2">
+                <div className={cn("shrink-0 px-2 text-3xl font-bold tabular-nums", session.shake && "shake")}>
+                  {session.view === "standard"
+                    ? `${session.tallyValue} / ${session.preset.maxWBC}`
+                    : `${session.estimate.fieldCount} / ${session.estimate.fieldCountMax}`}
+                </div>
+                <Button
+                  variant="outline"
+                  className="h-11 min-w-28 shrink-0 px-6"
+                  onPointerDown={startHold}
+                  onPointerUp={endHold}
+                  onPointerLeave={endHold}
+                >
+                  Clear
+                </Button>
+                <Button
+                  variant={session.increase ? "default" : "outline"}
+                  className="h-11 min-w-0 flex-1 px-2"
+                  onClick={() => session.setIncrease(true)}
+                >
+                  +
+                </Button>
+                <Button
+                  variant={!session.increase ? "default" : "outline"}
+                  className="h-11 min-w-0 flex-1 px-2"
+                  data-howto="minus"
+                  onClick={() => session.setIncrease(false)}
+                >
+                  -
+                </Button>
+                <Button variant="outline" className="h-11 min-w-0 flex-1 px-2" onClick={session.undo}>
+                  Undo
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 shrink-0 px-3"
+                  aria-label="Exit full screen keypad"
+                  data-howto="pad-fullscreen-toggle"
+                  onClick={() => setPadFullscreen(false)}
+                >
+                  <Minimize2 />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-2 flex items-center gap-2">
+                  <div className={cn("min-w-0 flex-1 text-center text-3xl font-bold tabular-nums", session.shake && "shake")}>
+                    {session.view === "standard"
+                      ? `${session.tallyValue} / ${session.preset.maxWBC}`
+                      : `${session.estimate.fieldCount} / ${session.estimate.fieldCountMax}`}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="h-11 shrink-0 px-4"
+                    onPointerDown={startHold}
+                    onPointerUp={endHold}
+                    onPointerLeave={endHold}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="mb-2 flex items-center gap-2">
+                  <Button
+                    variant={session.increase ? "default" : "outline"}
+                    className={countActionClass}
+                    onClick={() => session.setIncrease(true)}
+                  >
+                    +
+                  </Button>
+                  <Button
+                    variant={!session.increase ? "default" : "outline"}
+                    className={countActionClass}
+                    data-howto="minus"
+                    onClick={() => session.setIncrease(false)}
+                  >
+                    -
+                  </Button>
+                  <Button variant="outline" className={countActionClass} onClick={session.undo}>
+                    Undo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 min-h-11 shrink-0 px-3"
+                    aria-label="Exit full screen keypad"
+                    data-howto="pad-fullscreen-toggle"
+                    onClick={() => setPadFullscreen(false)}
+                  >
+                    <Minimize2 />
+                  </Button>
+                </div>
+              </>
+            )
+          ) : (
+            <>
+              <div className={cn("mb-3 text-center text-3xl font-bold tabular-nums", session.shake && "shake")}>
+                {session.view === "standard"
+                  ? `${session.tallyValue} / ${session.preset.maxWBC}`
+                  : `${session.estimate.fieldCount} / ${session.estimate.fieldCountMax}`}
+              </div>
+              <Button
+                variant="outline"
+                className="mb-3 w-full"
+                onPointerDown={startHold}
+                onPointerUp={endHold}
+                onPointerLeave={endHold}
+              >
+                Clear
+              </Button>
+            </>
+          )}
+          {session.view === "standard" && !fullscreenActive ? (
             <div className="mb-3">
               <Label htmlFor="count-limit">Count limit</Label>
               <Input
@@ -265,7 +391,13 @@ function CounterScreen() {
               />
             </div>
           ) : null}
-          <div className={cn(!session.isHandset && session.keyboardType === "numpad" && "counter-pad")}>
+          <div
+            className={cn(
+              !session.isHandset && !fullscreenActive && session.keyboardType === "numpad" && "counter-pad",
+              fullscreenActive && "flex min-h-0 flex-1 flex-col",
+            )}
+          >
+            {fullscreenActive ? null : (
             <div className="mb-3 flex items-center gap-2">
               <Button
                 variant={session.increase ? "default" : "outline"}
@@ -285,9 +417,22 @@ function CounterScreen() {
               <Button variant="outline" className={countActionClass} onClick={session.undo}>
                 Undo
               </Button>
+              {session.isHandset ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 min-h-11 shrink-0 px-3"
+                  aria-label="Enter full screen keypad"
+                  data-howto="pad-fullscreen-toggle"
+                  onClick={() => setPadFullscreen(true)}
+                >
+                  <Maximize2 />
+                </Button>
+              ) : null}
               {!session.isHandset ? <KeyboardLayoutToggle /> : null}
             </div>
-            <Keypad />
+            )}
+            <Keypad className={cn(fullscreenActive && "min-h-0 flex-1")} fullscreenPad={fullscreenActive} />
           </div>
         </Card>
       </div>
