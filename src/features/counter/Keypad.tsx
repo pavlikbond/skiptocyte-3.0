@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Grid3x3, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -41,6 +42,12 @@ const KEYBOARD = [
   ["z", "x", "c", "v", "b", "n", "m", ",", ".", "/"],
 ];
 const MOBILE_BINDING_KEYS = HANDSET_NUMPAD_KEYS;
+// A touch tap also synthesizes a click. Ignore that click so a key is counted once.
+const TOUCH_CLICK_SUPPRESS_MS = 700;
+
+function pointInsideRect(x: number, y: number, rect: DOMRect) {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
 
 type BindingSession = ReturnType<typeof useCounterSession>;
 
@@ -142,6 +149,27 @@ function KeyButton({
   const captureActive = Boolean(ctx.capture);
   const captureCurrent = captureCurrentKey === keyValue;
   const captureTaken = captureActive && Boolean(bound) && !captureCurrent;
+  const pressed = useRef(false);
+  const touchGestureAt = useRef(0);
+  const lastPoint = useRef({ x: 0, y: 0 });
+
+  const activate = () => {
+    if (ctx.capture) {
+      ctx.captureKey(keyValue);
+      return;
+    }
+    if (ctx.view === "estimate") {
+      if (keyValue === ctx.estimate.fieldCountKey) {
+        ctx.bumpField(ctx.increase ? 1 : -1);
+        return;
+      }
+      const cell = ctx.estimate.cells.find((c) => c.key === keyValue);
+      if (cell) ctx.bumpEstimateCell(cell.id, ctx.increase ? 1 : -1);
+      return;
+    }
+    const row = ctx.preset.rows.find((r) => r.key === keyValue);
+    if (row) ctx.bumpRow(row.id, ctx.increase ? 1 : -1);
+  };
 
   return (
     <button
@@ -154,7 +182,7 @@ function KeyButton({
       }
       className={cn(
         "flex min-h-0 select-none flex-col items-center justify-center rounded-md border border-border bg-background px-0.5 py-0.5 text-sm shadow-sm outline-none hover:bg-accent active:bg-accent cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-        // A small finger twitch must stay a tap. manipulation still allows a pan, which cancels the click.
+        // Keep the pointer alive through a small slide so pointerup can count it.
         fill ? "touch-none" : "touch-manipulation",
         handsetLike && !fill && "min-h-21 px-1 py-2 text-lg",
         fill && "h-full w-full min-h-0 px-1 py-1 text-lg",
@@ -165,22 +193,41 @@ function KeyButton({
         hideHandset && "hide-handset",
         className,
       )}
+      onPointerDown={(event) => {
+        if (event.pointerType === "mouse") return;
+        pressed.current = true;
+        touchGestureAt.current = Date.now();
+        lastPoint.current = { x: event.clientX, y: event.clientY };
+      }}
+      onPointerMove={(event) => {
+        if (!pressed.current || event.pointerType === "mouse") return;
+        if (event.clientX === 0 && event.clientY === 0) return;
+        lastPoint.current = { x: event.clientX, y: event.clientY };
+      }}
+      onPointerUp={(event) => {
+        if (event.pointerType === "mouse") return;
+        const startedHere = pressed.current;
+        pressed.current = false;
+        if (!startedHere) return;
+        touchGestureAt.current = Date.now();
+        event.preventDefault();
+        // Some phones report 0,0 for pointerup. The last real point is still inside this key
+        // for a twitch, and outside it once the finger has crossed a gap.
+        const point =
+          event.clientX === 0 && event.clientY === 0
+            ? lastPoint.current
+            : { x: event.clientX, y: event.clientY };
+        if (!pointInsideRect(point.x, point.y, event.currentTarget.getBoundingClientRect())) return;
+        activate();
+      }}
+      onPointerCancel={() => {
+        pressed.current = false;
+      }}
       onClick={() => {
-        if (ctx.capture) {
-          ctx.captureKey(keyValue);
-          return;
-        }
-        if (ctx.view === "estimate") {
-          if (keyValue === ctx.estimate.fieldCountKey) {
-            ctx.bumpField(ctx.increase ? 1 : -1);
-            return;
-          }
-          const cell = ctx.estimate.cells.find((c) => c.key === keyValue);
-          if (cell) ctx.bumpEstimateCell(cell.id, ctx.increase ? 1 : -1);
-          return;
-        }
-        const row = ctx.preset.rows.find((r) => r.key === keyValue);
-        if (row) ctx.bumpRow(row.id, ctx.increase ? 1 : -1);
+        // Touch already counted on pointerup. This swallows the extra click, including one
+        // the browser still emits after a slide that stays inside the key.
+        if (Date.now() - touchGestureAt.current < TOUCH_CLICK_SUPPRESS_MS) return;
+        activate();
       }}
     >
       <span className="font-semibold leading-none tabular-nums">{label}</span>
