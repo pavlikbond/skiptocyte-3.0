@@ -73,6 +73,7 @@ function CounterScreen() {
   );
   const [wbcText, setWbcText] = useState("");
   const holdRef = useRef<number | null>(null);
+  const heldClearRef = useRef(false);
   const fullscreenActive = padFullscreen;
   const fullscreenLandscape = fullscreenActive && landscape;
 
@@ -130,19 +131,48 @@ function CounterScreen() {
     return () => setRuntimeActive(false);
   }, [setRuntimeActive]);
 
+  useEffect(() => {
+    return () => {
+      if (holdRef.current !== null) window.clearTimeout(holdRef.current);
+    };
+  }, []);
+
+  const cancelHold = (event?: { type?: string; pointerType?: string }) => {
+    // Touch browsers emit pointerleave for a tap that never slid off the button.
+    if (event?.type === "pointerleave" && event.pointerType !== "mouse") return;
+    if (holdRef.current === null) return;
+    window.clearTimeout(holdRef.current);
+    holdRef.current = null;
+  };
+
   const startHold = () => {
+    cancelHold();
+    heldClearRef.current = false;
     holdRef.current = window.setTimeout(() => {
-      session.clearSession();
       holdRef.current = null;
+      heldClearRef.current = true;
+      session.clearSession();
     }, 600);
   };
 
-  const endHold = () => {
-    if (holdRef.current) {
-      window.clearTimeout(holdRef.current);
-      holdRef.current = null;
-      setClearOpen(true);
+  // Touch browsers fire a click after pointerup. Opening here, not on pointerup,
+  // keeps that click on the button instead of the backdrop that would dismiss it.
+  const requestClear = () => {
+    if (heldClearRef.current) {
+      heldClearRef.current = false;
+      return;
     }
+    setClearOpen(true);
+  };
+
+  const clearHoldProps = {
+    type: "button" as const,
+    onPointerDown: startHold,
+    onPointerUp: cancelHold,
+    onPointerCancel: cancelHold,
+    onPointerLeave: cancelHold,
+    onClick: requestClear,
+    onContextMenu: (event: { preventDefault: () => void }) => event.preventDefault(),
   };
 
   const requestApply = (choice: Exclude<PendingApply, null>) => {
@@ -275,9 +305,7 @@ function CounterScreen() {
                 <Button
                   variant="outline"
                   className="h-11 min-w-28 shrink-0 px-6"
-                  onPointerDown={startHold}
-                  onPointerUp={endHold}
-                  onPointerLeave={endHold}
+                  {...clearHoldProps}
                 >
                   Clear
                 </Button>
@@ -321,9 +349,7 @@ function CounterScreen() {
                   <Button
                     variant="outline"
                     className="h-11 shrink-0 px-4"
-                    onPointerDown={startHold}
-                    onPointerUp={endHold}
-                    onPointerLeave={endHold}
+                    {...clearHoldProps}
                   >
                     Clear
                   </Button>
@@ -370,9 +396,7 @@ function CounterScreen() {
               <Button
                 variant="outline"
                 className="mb-3 w-full"
-                onPointerDown={startHold}
-                onPointerUp={endHold}
-                onPointerLeave={endHold}
+                {...clearHoldProps}
               >
                 Clear
               </Button>
