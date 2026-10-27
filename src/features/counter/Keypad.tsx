@@ -153,7 +153,9 @@ function KeyButton({
         captureTaken ? `${label}, ${bound}, swap` : bound ? `${label}, ${bound}` : label
       }
       className={cn(
-        "flex min-h-0 touch-manipulation select-none flex-col items-center justify-center rounded-md border border-border bg-background px-0.5 py-0.5 text-sm shadow-sm outline-none hover:bg-accent active:bg-accent cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        "flex min-h-0 select-none flex-col items-center justify-center rounded-md border border-border bg-background px-0.5 py-0.5 text-sm shadow-sm outline-none hover:bg-accent active:bg-accent cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        // A small finger twitch must stay a tap. manipulation still allows a pan, which cancels the click.
+        fill ? "touch-none" : "touch-manipulation",
         handsetLike && !fill && "min-h-21 px-1 py-2 text-lg",
         fill && "h-full w-full min-h-0 px-1 py-1 text-lg",
         ctx.flashKey === keyValue &&
