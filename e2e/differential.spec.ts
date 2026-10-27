@@ -754,6 +754,9 @@ test.describe("differential counter", () => {
     test("binds a handset keypad key from the mobile key picker", async ({ page }) => {
       await page.getByRole("button", { name: "Key for Neutrophil: 5" }).click();
       await expect(page.getByText("Tap to bind keypad key")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Bind 5, current binding" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Bind 6, taken by Lymphocyte" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Bind /, available" })).toBeVisible();
       await page.locator('[data-howto="bind-key"][data-key="."]').click();
 
       await expect(page.getByRole("button", { name: "Key for Neutrophil: ." })).toBeVisible();

@@ -42,11 +42,70 @@ const KEYBOARD = [
 ];
 const MOBILE_BINDING_KEYS = HANDSET_NUMPAD_KEYS;
 
+type BindingSession = ReturnType<typeof useCounterSession>;
+
+/** Cell or field that already owns this key, or null when the key is free. */
+function boundLabel(ctx: BindingSession, keyValue: string): string | null {
+  if (!keyValue) return null;
+  if (ctx.view === "estimate") {
+    if (keyValue === ctx.estimate.fieldCountKey) return "field count";
+    const cell = ctx.estimate.cells.find((item) => item.key === keyValue);
+    return cell ? cell.name.trim() || "Unnamed" : null;
+  }
+  const row = ctx.preset.rows.find((item) => item.key === keyValue);
+  return row ? row.cell.trim() || "Unnamed" : null;
+}
+
 function KeyHint({ children }: { children: string }) {
   return (
     <kbd className="mx-0.5 inline-flex h-5 items-center rounded-sm border border-border bg-muted px-1.5 font-sans text-[0.7rem] font-semibold text-foreground">
       {children}
     </kbd>
+  );
+}
+
+function BindingKeyButton({ keyValue, currentKey }: { keyValue: string; currentKey: string }) {
+  const ctx = useCounterSession();
+  const owner = boundLabel(ctx, keyValue);
+  const current = currentKey === keyValue;
+  const taken = Boolean(owner) && !current;
+  const label = keyLabel(keyValue);
+  const caption = current ? "Current" : taken ? owner : "—";
+
+  return (
+    <button
+      type="button"
+      data-capture-zone
+      data-howto="bind-key"
+      data-key={keyValue}
+      title={current ? "Current binding" : taken ? `${owner}. Tap to swap.` : "Available"}
+      aria-label={
+        current
+          ? `Bind ${label}, current binding`
+          : taken
+            ? `Bind ${label}, taken by ${owner}`
+            : `Bind ${label}, available`
+      }
+      aria-pressed={current}
+      className={cn(
+        "flex h-14 min-w-0 touch-manipulation cursor-pointer select-none flex-col items-center justify-center rounded-md border px-1 outline-none",
+        "hover:bg-accent active:bg-accent focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        current && "border-ring bg-accent text-accent-foreground ring-2 ring-ring/50",
+        taken && "border-border border-b-2 bg-card text-foreground",
+        !current && !taken && "border-dashed border-border bg-transparent text-foreground",
+      )}
+      onClick={() => ctx.captureKey(keyValue)}
+    >
+      <span className="text-sm font-semibold leading-none tabular-nums">{label}</span>
+      <span
+        className={cn(
+          "mt-0.5 line-clamp-2 w-full px-0.5 text-center text-[11px] leading-tight",
+          current ? "font-medium text-accent-foreground" : taken ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {caption}
+      </span>
+    </button>
   );
 }
 
@@ -252,28 +311,14 @@ export function Keypad({ className, fullscreenPad = false }: { className?: strin
             </p>
             {handsetLike ? (
               <div className="mt-3 rounded-md border border-border bg-background p-2">
-                <p className="mb-2 text-xs font-medium text-muted-foreground">Tap to bind keypad key</p>
-                <div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {MOBILE_BINDING_KEYS.map((k) => (
-                      <button
-                        key={k}
-                        type="button"
-                        data-capture-zone
-                        data-howto="bind-key"
-                        data-key={k}
-                        aria-label={`Bind ${keyLabel(k)} key`}
-                        aria-pressed={captureCurrentKey === k}
-                        className={cn(
-                          "h-10 rounded border border-border bg-background px-1 text-sm font-medium hover:bg-accent active:bg-accent",
-                          captureCurrentKey === k && "border-ring bg-accent text-accent-foreground ring-2 ring-ring/50",
-                        )}
-                        onClick={() => ctx.captureKey(k)}
-                      >
-                        {keyLabel(k)}
-                      </button>
-                    ))}
-                  </div>
+                <p className="text-xs font-medium text-muted-foreground">Tap to bind keypad key</p>
+                <p className="mt-0.5 mb-2 text-[11px] leading-snug text-muted-foreground">
+                  Dashed keys are free. Tap a named key to swap.
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {MOBILE_BINDING_KEYS.map((k) => (
+                    <BindingKeyButton key={k} keyValue={k} currentKey={captureCurrentKey} />
+                  ))}
                 </div>
               </div>
             ) : null}
